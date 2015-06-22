@@ -1,0 +1,453 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require MLKL; 
+ 
+
+/**************************************************************************************************/
+/*                                                  Layer                                         */
+// Base class of all kind of NN layers
+interface MkCNNLayerInterface {
+  display();
+	Index inSize();
+	Index outSize();
+	Index paramSize();
+	Index fanInSize() ;
+	Index connectionSize();
+  Float64[] output(Index worker_index);
+  Float64[] delta(Index worker_index);
+  Float64[] weight();
+  Float64[] bias();
+  Float64[] weightDiff(Index index);
+  Float64[] biasDiff(Index index);
+  Float64[] fprop!(Float64 ins[], Index worker_index);
+  Float64[] bprop!(Float64 current_delta[], Index worker_index);
+  Float64[] bprop2nd!(Float64 current_delta2[]);
+  Boolean connect!(io MkCNNLayerInterface tail);
+  initWeight!();
+  postUpdate!();
+  updateWeight!(io Ref<MkCNNOptimizerInterface> o, Index worker_size, Index batch_size) ;
+  divideHessian!(Index denominator);
+  Ref<MkCNNLayerInterface> prev();
+  prev!(Ref<MkCNNLayerInterface> hs);
+  Ref<MkCNNLayerInterface> next();
+  next!(Ref<MkCNNLayerInterface> hs);
+  Ref<MkCNNActivationFunctionInterface> activationFunction();
+};
+
+object MkCNNLayerBase : MkCNNLayerInterface {
+  protected MkCCNConfig config;
+  protected Index in_size;
+  protected Index out_size;
+  protected Float64 output[][];                 // last output of current layer, set by fprop
+  protected Float64 prev_delta[][];             // last delta of previous layer, set by bprop
+  protected Float64 w[];                        // weight vector
+  protected Float64 b[];                        // bias vector
+  protected Float64 dw[][];                     // difference of weight vector
+  protected Float64 db[][];                     // difference of bias vector
+  protected Float64 w_hessian[];                // diagonal terms of the wieght hessian matrix 
+  protected Float64 b_hessian[];                // diagonal terms of the bias hessian matrix 
+  protected Float64 prev_delta2[];              // d^2E/da^2
+  protected MkCNNActivationFunctionInterface a;
+  protected Ref<MkCNNLayerInterface> next;
+  protected Ref<MkCNNLayerInterface> prev;
+};
+
+protected MkCNNLayerBase.setSize!(
+  Index in_size, 
+  Index out_size, 
+  Index weight_size, 
+  Index bias_size) 
+{
+  this.in_size = in_size;
+  this.out_size = out_size;
+  this.w.resize(weight_size);
+  this.b.resize(bias_size);
+  this.w_hessian.resize(weight_size);
+  this.b_hessian.resize(bias_size);
+  this.prev_delta2.resize(in_size);
+
+  for(Index i=0; i<this.output.size(); ++i)
+    this.output[i].resize(out_size);
+
+  for(Index i=0; i<this.prev_delta.size(); ++i)
+    this.prev_delta[i].resize(in_size);
+ 
+  for(Index i=0; i<this.dw.size(); ++i)
+    this.dw[i].resize(weight_size);
+
+  for(Index i=0; i<this.db.size(); ++i)
+    this.db[i].resize(bias_size);
+}
+
+protected MkCNNLayerBase.init!(
+  Index activation,
+  Index in_size, 
+  Index out_size, 
+  Index weight_size, 
+  Index bias_size) 
+{
+  this.output.resize(this.config.taskSize());
+  this.prev_delta.resize(this.config.taskSize());
+  this.dw.resize(this.config.taskSize());
+  this.db.resize(this.config.taskSize());
+  this.setSize(in_size, out_size, weight_size, bias_size);
+
+  switch(activation) {
+    case MK_ACTIVATION_FUNC_IDENTITY :
+      this.a = MkCNNActivationFunctionIdentity();
+    break;
+
+     case MK_ACTIVATION_FUNC_SIGMOID :
+      this.a = MkCNNActivationFunctionSigmoid();
+    break;
+
+     case MK_ACTIVATION_FUNC_RECTIFIEDLINEAR :
+      this.a = MkCNNActivationFunctionRectifiedLinear();
+    break;
+
+     case MK_ACTIVATION_FUNC_TANH :
+      this.a = MkCNNActivationFunctionTanH();
+    break;
+
+    default :
+      this.a = MkCNNActivationFunctionIdentity();
+    break;
+  }
+}
+
+public MkCNNLayerBase(
+  Index activation,
+	Index in_size, 
+	Index out_size, 
+	Index weight_size, 
+	Index bias_size) 
+{
+  this.init(activation, in_size, out_size, weight_size, bias_size);
+}
+
+public MkCNNLayerBase.display() {
+  report("\nMkCNNLayerBase Attributs");
+  report("config "          + this.config);
+  report("inSize "          + this.in_size);
+  report("outSize "         + this.out_size);
+  report("weightSize "      + this.w.size());
+  report("biasSize "        + this.b.size()); 
+  report("paramSize "       + this.paramSize());
+  report("fanInSize "       + this.fanInSize()); 
+  report("connectionSize "  + this.connectionSize()); 
+}
+
+public Index MkCNNLayerBase.inSize() { 
+  return this.in_size; 
+}
+
+public Index MkCNNLayerBase.outSize() { 
+  return this.out_size; 
+}
+
+public Index MkCNNLayerBase.paramSize() { 
+  return this.w.size() + this.b.size(); 
+}
+
+public Index MkCNNLayerBase.fanInSize() {
+  return 0;
+}
+
+public Index MkCNNLayerBase.connectionSize() {
+  return 0;
+}
+
+protected Float64[] MkCNNLayerBase.output(Index worker_index) { 
+	return this.output[worker_index]; 
+}
+
+protected Float64[] MkCNNLayerBase.delta(Index worker_index) { 
+	return this.prev_delta[worker_index]; 
+}
+
+protected Float64[] MkCNNLayerBase.weight() { 
+	return this.w; 
+}
+
+protected Float64[] MkCNNLayerBase.bias() { 
+	return this.b; 
+}
+
+protected Float64[] MkCNNLayerBase.weightDiff(Index index) {
+  return this.dw[index];
+}
+
+protected Float64[] MkCNNLayerBase.biasDiff(Index index) {
+  return this.db[index];
+}
+
+protected Float64[] MkCNNLayerBase.weightHessian() {
+  return this.w_hessian;
+}
+
+protected Float64[] MkCNNLayerBase.biasHessian() {
+  return this.b_hessian;
+}
+
+protected Float64[] MkCNNLayerBase.prevDelta2() {
+  return this.prev_delta2;
+}
+
+public Boolean MkCNNLayerBase.hasSameWeights(Ref<MkCNNLayerBase> rhs, Float64 eps) {
+  if (this.w.size() != rhs.w.size() || this.b.size() != rhs.b.size())
+    return false;
+
+  for (Index i = 0; i < this.w.size(); i++)
+    if (abs(this.w[i] - rhs.w[i]) > eps) 
+      return false;
+
+  for (Index i = 0; i < this.b.size(); i++)
+    if (abs(this.b[i] - rhs.b[i]) > eps) 
+      return false;
+
+  return true;
+}
+
+public Ref<MkCNNActivationFunctionInterface> MkCNNLayerBase.activationFunction() {
+  return this.a;
+}
+
+public Ref<MkCNNLayerInterface> MkCNNLayerBase.next() {
+  return this.next;
+}
+
+public Ref<MkCNNLayerInterface> MkCNNLayerBase.prev() {
+  return this.prev;
+}
+
+public MkCNNLayerBase.next!(Ref<MkCNNLayerInterface> layer) {
+  this.next = layer;
+}
+
+public MkCNNLayerBase.prev!(Ref<MkCNNLayerInterface> layer) {
+  this.prev = layer;
+}
+
+public Boolean MkCNNLayerBase.connect!(io MkCNNLayerInterface tail) {
+
+  if(this.outSize() != 0 && tail.inSize() != this.outSize())
+  {
+    report("Error : MkCNNLayerBase.connect dimenssion mismatch");
+    return false;
+  }
+  this.next(tail);
+  tail.prev(this);
+  return true;
+}
+
+// Set to zero the difference vectors dw and db
+protected MkCNNLayerBase.clearDiff!(Index worker_size) {
+  for (Index i=0; i<worker_size; i++) 
+  {
+    for(Index j=0; j<this.dw[i].size(); ++j) this.dw[i][j] = 0.0;   
+    for(Index j=0; j<this.db[i].size(); ++j) this.db[i][j] = 0.0;  
+  }
+}
+
+public MkCNNLayerBase.initWeight!() {
+
+  Float64 weight_base = 0.5 / sqrt(this.fanInSize());
+  UniformRealDistribution(-weight_base, weight_base, this.w);
+  UniformRealDistribution(-weight_base, weight_base, this.b);
+  
+  for(Index i=0; i<this.w_hessian.size(); ++i) this.w_hessian[i] = 0.0;   
+  for(Index i=0; i<this.b_hessian.size(); ++i) this.b_hessian[i] = 0.0;   
+  this.clearDiff(this.config.taskSize());
+}
+
+// Called afrer updating weight
+protected MkCNNLayerBase.postUpdate!() {}
+
+protected MkCNNLayerBase.merge!(Index worker_size, Index batch_size) {
+
+  //for (Index i=1; i<worker_size; i++) {
+  //  for(Index j=0; j<this.dw[i].size(); ++j) 
+  //    this.dw[0][j] += this.dw[i][j];  
+  //
+  //  for(Index j=0; j<this.db[i].size(); ++j) 
+  //    this.db[0][j] += this.dw[i][j];  
+  //}
+  for(Index j=0; j<this.dw[0].size(); ++j) 
+    this.dw[0][j] /= Float64(batch_size);  
+  for(Index j=0; j<this.db[0].size(); ++j) 
+    this.db[0][j] /= Float64(batch_size);  
+}
+
+public MkCNNLayerBase.updateWeight!(
+  io Ref<MkCNNOptimizerInterface> o, 
+  Index worker_size, 
+  Index batch_size) 
+{
+  if (this.w.size() == 0) 
+    return;
+
+  this.merge(worker_size, batch_size);
+  o.update(this.dw[0], this.w_hessian, this.w);
+  o.update(this.db[0], this.b_hessian, this.b);
+
+  this.clearDiff(worker_size);
+  this.postUpdate();
+}
+
+public MkCNNLayerBase.divideHessian!(Index denominator) { 
+  for(Index i=0; i<this.w_hessian.size(); ++i) this.w_hessian[i] /= Float64(denominator); 
+  for(Index i=0; i<this.b_hessian.size(); ++i) this.b_hessian[i] /= Float64(denominator);   
+}
+
+public Float64[] MkCNNLayerBase.fprop!(Float64 ins[], Index worker_index) {
+  Float64 temp[]; return temp;
+}
+
+public Float64[] MkCNNLayerBase.bprop!(Float64 current_delta[], Index worker_index) {
+  Float64 temp[]; return temp;
+}
+
+public Float64[] MkCNNLayerBase.bprop2nd!(Float64 current_delta2[]) {
+  Float64 temp[]; return temp;
+}
+
+/*
+class layer_base {
+
+  virtual void save(std::ostream& os) const {
+    for (auto w : this.w) os << w << " ";
+    for (auto b : b_) os << b << " ";
+  }
+
+  virtual void load(std::istream& is) {
+    for (auto& w : this.w) is >> w;
+    for (auto& b : b_) is >> b;
+	}    
+};
+
+template <typename Char, typename CharTraits, typename N>
+std::basic_ostream<Char, CharTraits>& operator << (std::basic_ostream<Char, CharTraits>& os, const layer_base<N>& v) {
+  v.save(os);
+  return os;
+}
+
+template <typename Char, typename CharTraits, typename N>
+std::basic_istream<Char, CharTraits>& operator >> (std::basic_istream<Char, CharTraits>& os, layer_base<N>& v) {
+  v.load(os);
+  return os;
+}
+*/
+/*                                                  Layer                                         */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                                Input Layer                                     */
+object MkCNNInputLayer : MkCNNLayerBase {};
+
+public MkCNNInputLayer() {
+  this.init(MK_ACTIVATION_FUNC_IDENTITY, 0, 0, 0, 0);
+}
+
+public Index MkCNNInputLayer.inSize() {
+  return (this.next() != null) ? this.next().inSize(): 0;
+}
+
+public Index MkCNNInputLayer.connectionSize() { 
+  return this.inSize;
+}
+
+public Index MkCNNInputLayer.fanInSize() {
+  return 1;
+}
+
+public Float64[] MkCNNInputLayer.fprop!(Float64 ins[], Index worker_index) {
+  this.output[worker_index] = ins;
+  return (this.next()!= null) ? this.next().fprop(ins, worker_index) : this.output[worker_index];
+}
+
+public Float64[] MkCNNInputLayer.bprop!(Float64 current_delta[], Index worker_index) {
+  return current_delta;
+}
+
+public Float64[] MkCNNInputLayer.bprop2nd!(Float64 current_delta2[]) {
+  return current_delta2;
+}
+/*                                                Input Layer                                     */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                          Layers (Stack of Layer)                               */
+object MkCNNLayers {
+  private MkCNNLayerInterface layers[];
+  private MkCNNLayerInterface first; // Is constrcted as an InputLayer
+};
+
+private MkCNNLayers.construct!(io MkCNNLayers rhs) {
+  this.add(this.first);
+  for (Index i = 1; i < rhs.layers.size(); i++)
+    this.add(rhs.layers[i]);
+}
+
+public MkCNNLayers() {
+  this.first = MkCNNInputLayer();
+  this.add(this.first);
+}
+
+public MkCNNLayers.display() {
+  for(Index l=0; l<this.layers.size(); ++l)
+    this.layers[l].display();
+}
+
+public MkCNNLayers.add!(io MkCNNLayerInterface new_tail) {
+  if(this.tail() != null)
+    this.tail().connect(new_tail);
+  this.layers.push(new_tail);
+}
+
+public Boolean MkCNNLayers.empty() {
+  return (this.layers.size() == 0);
+}
+
+public Ref<MkCNNLayerInterface> MkCNNLayers.head() {
+  if(this.empty) return null;
+  else return this.layers[0];
+}
+
+public Ref<MkCNNLayerInterface> MkCNNLayers.tail() {
+  if(this.empty()) return null;
+  else return this.layers[this.layers.size() - 1];
+}
+
+public MkCNNLayers.reset!() {
+  for(Index l=0; l<this.layers.size(); ++l)
+    this.layers[l].initWeight();
+}
+
+public MkCNNLayers.divideHessian!(Index denominator) {
+  for(Index l=0; l<this.layers.size(); ++l)
+    this.layers[l].divideHessian(denominator);
+}
+
+public MkCNNLayers.updateWeights!(
+  io Ref<MkCNNOptimizerInterface> o, 
+  Index worker_size, 
+  Index batch_size) 
+{
+  for(Index l=0; l<this.layers.size(); ++l)
+    this.layers[l].updateWeight(o, worker_size, batch_size);
+}
+/*                                          Layers (Stack of Layer)                               */
+/**************************************************************************************************/
+ 

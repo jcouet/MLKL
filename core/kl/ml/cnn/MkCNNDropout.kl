@@ -1,0 +1,169 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require MLKL; 
+
+
+/**************************************************************************************************/
+/*                                               None filter                                      */
+interface MkCNNFilterInterface {
+  Float64 dropoutRate();
+  dropoutRate!(Float64 rate);
+  Index mode();
+  mode!(Index mode);
+  Index context();
+  context!(Index context);
+  Float64[] filterFProp!(Float64 outs[], Index index);
+  Float64[] filterBProp!(Float64 delta[], Index index);
+  shuffle!();
+  endBatch!();
+};
+
+object MkCNNFilterNone : MkCNNFilterInterface {};
+
+function MkCNNFilterNone(Index out_size) {}
+
+public Float64 MkCNNFilterNone.dropoutRate() {
+  return 0.0;
+}
+
+public MkCNNFilterNone.dropoutRate!(Float64 rate) {}
+
+public Index MkCNNFilterNone.mode() {
+  return this.mode;
+}
+
+public MkCNNFilterNone.mode!(Index mode) {}
+
+public Index MkCNNFilterNone.context() {
+  return 0;
+}
+
+public MkCNNFilterNone.context!(Index context) {}
+
+public Float64[] MkCNNFilterNone.filterFProp!(Float64 outs[], Index index) {
+  return outs;
+}
+
+public Float64[] MkCNNFilterNone.filterBProp!(Float64 delta[], Index index) {
+  return delta;
+}
+
+private MkCNNFilterNone.shuffle!() {}
+
+public MkCNNFilterNone.endBatch!() {}
+/*                                               None filter                                      */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                             Drop-out filter                                    */
+const Index DROPOUT_CONTEXT_TRAIN_PHASE = 0;
+const Index DROPOUT_CONTEXT_TEST_PHASE  = 1;
+const Index DROPOUT_MODE_PER_DATA       = 0;
+const Index DROPOUT_MODE_PER_BATCH      = 1;
+
+object MkCNNDropout : MkCNNFilterInterface {
+  private MkCCNConfig config;
+  private Index out_size;
+  private Index mask[];
+  private Float64 masked_out[][];
+  private Float64 masked_delta[][];
+  private Index context;
+  private Index mode;
+  private Float64 dropout_rate;
+};
+
+function MkCNNDropout(Index out_size) {
+  this.out_size = out_size;
+  this.context = DROPOUT_CONTEXT_TRAIN_PHASE;
+  this.mode = DROPOUT_MODE_PER_DATA;
+  this.dropout_rate = 0.5;
+  this.mask.resize(out_size);
+
+  this.masked_out.resize(this.config.taskSize());
+  this.masked_delta.resize(this.config.taskSize());
+  for (Index i=0; i<this.config.taskSize(); i++) 
+  {
+    this.masked_out[i].resize(out_size);
+    this.masked_delta[i].resize(out_size);
+  }
+  this.shuffle();
+}
+
+public Float64 MkCNNDropout.dropoutRate() {
+  return this.dropout_rate;
+}
+
+public MkCNNDropout.dropoutRate!(Float64 rate) {
+  if(rate < 0.0 || rate >= 1.0) return;
+  this.dropout_rate = rate;
+}
+
+public Index MkCNNDropout.mode() {
+  return this.mode;
+}
+
+public MkCNNDropout.mode!(Index mode) {
+  this.mode = mode;
+}
+
+public Index MkCNNDropout.context() {
+  return this.context;
+}
+
+public MkCNNDropout.context!(Index context) {
+  this.context = context;
+}
+
+// Mask output vector
+public Float64[] MkCNNDropout.filterFProp!(Float64 outs[], Index index) {
+
+  if (this.context == DROPOUT_CONTEXT_TRAIN_PHASE) 
+  {
+    for (Index i = 0; i < this.out_size; i++)
+      this.masked_out[index][i] = outs[i] * this.mask[i];
+  }
+
+  else if(this.context == DROPOUT_CONTEXT_TEST_PHASE) 
+  {
+    for (Index i = 0; i < this.out_size; i++)
+      this.masked_out[index][i] = outs[i] * this.dropout_rate;
+  }
+
+  return this.masked_out[index];
+}
+
+// Mask delta
+public Float64[] MkCNNDropout.filterBProp!(Float64 delta[], Index index) {
+  
+  for (Index i = 0; i < this.out_size; i++)
+    this.masked_delta[index][i] = delta[i] * this.mask[i];
+
+  if (this.mode == DROPOUT_MODE_PER_BATCH) 
+    this.shuffle();
+
+  return this.masked_delta[index];
+}
+
+private MkCNNDropout.shuffle!() {
+  for(Index i=0; i<this.mask.size(); ++i)
+    Bernoulli(1.0 - this.dropout_rate, this.mask[i]);
+}
+
+public MkCNNDropout.endBatch!() {
+  if(this.mode == DROPOUT_MODE_PER_BATCH) 
+    this.shuffle();
+}
+/*                                             Drop-out filter                                    */
+/**************************************************************************************************/
+
+ 

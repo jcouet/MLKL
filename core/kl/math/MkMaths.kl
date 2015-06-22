@@ -1,0 +1,195 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project KL_ML                                                    */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require Math;
+ 
+const Float64 pi = 3.14159265359;
+
+/**************************************************************************************************/
+/*                                               1. Others                                        */
+inline SInt32 Round(Float32 number)
+{
+  return (number >= 0) ? SInt32(number + 0.5) :SInt32(number - 0.5);
+}
+
+function SInt32 Sign(Float32 value) {
+  return (value >= 0.0f)?1:-1;
+}
+
+function SInt32 Sign(Index value) {
+  return (value >= 0)?1:-1;
+}
+/*
+function MkMaths.randListIndex(io UInt32 list_in[], io UInt32 list_out[]) {
+  MeUtilsWrapper wrapper;
+  MeUtilsWrapper_RandListIndex(wrapper, list_in, list_out);
+}
+*/
+function Index MaxIndex(Float64 array[]) {
+  Float64 max_val = 0;
+  Index max_index = 0;
+  for(Index i=0; i<array.size(); ++i)
+  {
+    if(max_val < array[i])
+    {
+      max_val = array[i];
+      max_index = i;
+    }
+  }
+  return max_index;
+}
+
+function Index MaxIndex(Float32 array[]) {
+  Float32 max_val = 0;
+  Index max_index = 0;
+  for(Index i=0; i<array.size(); ++i)
+  {
+    if(max_val < array[i])
+    {
+      max_val = array[i];
+      max_index = i;
+    }
+  }
+  return max_index;
+}
+
+function Index MaxIndex(Index array[]) {
+  Index max_val = 0;
+  Index max_index = 0;
+  for(Index i=0; i<array.size(); ++i)
+  {
+    if(max_val < array[i])
+    {
+      max_val = array[i];
+      max_index = i;
+    }
+  }
+  return max_index;
+}
+
+function Index MaxIndex(SInt32 array[]) {
+  SInt32 max_val = 0;
+  Index max_index = 0;
+  for(Index i=0; i<array.size(); ++i)
+  {
+    if(max_val < array[i])
+    {
+      max_val = array[i];
+      max_index = i;
+    }
+  }
+  return max_index;
+}
+
+inline Float32 Median(Float32 daArray[]) {
+
+  Float32 dpSorted[] = daArray.clone();
+
+  for(Index i = daArray.size() - 1; i > 0; --i) 
+  {
+    for(Index j = 0; j < i; ++j) 
+    {
+      if (dpSorted[j] > dpSorted[j+1]) 
+      {
+        Float32 dTemp = dpSorted[j];
+        dpSorted[j] = dpSorted[j+1];
+        dpSorted[j+1] = dTemp;
+      }
+    }
+  }
+
+  report("dpSorted " + dpSorted);
+  // Middle or average of middle values in the sorted array.
+  if ((daArray.size() % 2) == 0) 
+    return (dpSorted[daArray.size()/2] + dpSorted[(daArray.size()/2) - 1])/2.0;
+  else 
+    return dpSorted[daArray.size()/2];
+}
+/*                                                end Others                                      */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                         2. Coordonates Operations                              */
+function Vec3 CartToSpheCoord(
+  Float32 x, 
+  Float32 y, 
+  Float32 z) 
+{
+  Vec3 res;
+  // Rho, radius
+  res.x = sqrt(x*x + y*y + z*z);
+  // Phi angle
+  res.y = acos(y/res.x);
+  // Theta angle
+  res.z = acos(z/sqrt(z*z + x*x));
+  if(x < 0) res.z = 2*pi - res.z;
+  return res;
+}
+
+function Vec3 CartToSpheCoord(Vec3 coord) {
+  return CartToSpheCoord(coord.x, coord.y, coord.z);
+}
+
+function Vec3 SpheToCartCoord(
+  Float32 rho, 
+  Float32 phi, 
+  Float32 theta) 
+{
+  Vec3 res;
+  res.x = rho*sin(phi)*sin(theta);
+  res.y = rho*cos(phi);
+  res.z = rho*sin(phi)*cos(theta);
+  return res;
+}
+
+function Vec3 SpheToCartCoord(Vec3 coord) {
+  return SpheToCartCoord(coord.x, coord.y, coord.z);
+}
+/*                                         end Coordonates Operations                             */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                               4. Normes                                        */
+function Float32 FrobeniusNorm(Vec3 vec[])
+{
+  Float32 norm = 0.0, temp;
+  for(Index p=0; p<vec.size(); ++p)
+    norm += abs(vec[p].x)*abs(vec[p].x) + 
+            abs(vec[p].y)*abs(vec[p].y) + 
+            abs(vec[p].z)*abs(vec[p].z);
+  return sqrt(norm);
+}  
+
+function Float32 EntrywiseNorm(Vec3 vec[], Index n)
+{
+  Float32 norm = 0.0, temp;
+  for(Index p=0; p<vec.size(); ++p)
+    norm += pow(abs(vec[p].x), Float32(n)) + 
+            pow(abs(vec[p].x), Float32(n)) + 
+            pow(abs(vec[p].x), Float32(n));
+  return pow(norm, 1.0/Float32(n));
+}  
+
+function Float32 L2Norm(Vec3 vec[])
+{
+  Float32 norm = 0.0, temp;
+  for(Index p=0; p<vec.size(); ++p)
+  {
+    temp = vec[p].x + vec[p].y + vec[p].z;
+    norm += temp*temp;
+  }
+  return sqrt(norm);
+}    
+/*                                              end Normes                                        */
+/**************************************************************************************************/

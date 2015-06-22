@@ -1,0 +1,217 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project KL_ML                                                    */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require Math;
+
+
+struct MkFista {
+  Size m;
+  Size n;
+  Float32 tol; 
+  Float32 lambda;
+  Float32 lambda_tol;
+  Float32 A[][];
+  Float32 At[][]; 
+  Float32 b[]; 
+};
+
+function MkFista() {
+  this.tol = 1e-8;
+  this.lambda = 1e-2;
+  this.lambda_tol = 1e-8;
+}
+
+inline MkFista.init!(
+  Vec3 training[][],
+  Vec3 target[]) 
+{
+  this.n = training.size();
+  this.m = 3*training[0].size();
+
+  this.A.resize(this.m); 
+  for(Index p=0; p<this.m/3; ++p)
+  {
+    this.A[3*p + 0].resize(this.n);
+    this.A[3*p + 1].resize(this.n);
+    this.A[3*p + 2].resize(this.n);
+    for(Index t=0; t<this.n; ++t)
+    {
+      this.A[3*p + 0][t] = training[t][p].x;
+      this.A[3*p + 1][t] = training[t][p].y;
+      this.A[3*p + 2][t] = training[t][p].z;
+    }
+  }
+
+  this.At.resize(this.n); 
+  for(Index t=0; t<this.n; ++t) 
+  {
+    this.At[t].resize(this.m); 
+    for(Index p=0; p<this.m; ++p)
+      this.At[t][p] = this.A[p][t];
+  }
+  
+  this.b.resize(this.m); 
+  for(Index p=0; p<target.size(); ++p)
+  {
+    this.b[3*p + 0] = target[p].x;
+    this.b[3*p + 1] = target[p].y;
+    this.b[3*p + 2] = target[p].z;
+  }
+}
+
+inline MkFista.shrink!(
+  io Float32 v[], 
+  Float32 sigma) 
+{
+  for (Index i=0; i<v.size; i++) 
+  {
+    Float32 vi = v[i];
+    if (vi > sigma) v[i] = vi-sigma;
+    else if (vi < -sigma) v[i] = vi+sigma;
+    else v[i] = 0;
+  }
+}
+
+// approximate ||A||_2 by power method
+inline Float32 MkFista.fista_!() {
+
+  Float32 error = 0;
+  Float32 x[]; x.resize(this.n);
+  Float32 y[]; y.resize(this.m);
+
+  // calculate x = sum(abs(A), 1)';
+  for(Index j=0; j<this.n; j++)
+  {
+    for(Index i=0; i<this.m; ++i)
+      x[j] += abs(this.A[i][j]);
+    error += x[j]*x[j];
+  }
+
+  error = sqrt(error);
+  for(Index j=0; j<this.n; j++) 
+    x[j] /= error;
+
+  Index count=0;
+  Float32 error_old;
+  while( abs(error - error_old) > (this.tol * error) )
+  {
+    error_old = error;
+    for(Index i=0; i<this.m; ++i) 
+    { 
+      y[i] = 0.0;
+      for(Index j=0; j<this.n; j++)
+        y[i] += this.A[i][j]*x[j];
+    }
+    
+    for(Index j=0; j<this.n; j++) 
+    {
+      x[j] = 0.0;
+      for(Index i=0; i<this.m; ++i)
+        x[j] += this.At[j][i]*y[i];
+    }
+    
+    Float32 norm_x = 0;
+    for(Index j=0; j<this.n; j++)
+      norm_x += x[j]*x[j];
+    norm_x = sqrt(norm_x);
+    
+    Float32 norm_y = 0;
+    for(Index i=0; i<this.m; ++i) 
+      norm_y += y[i]*y[i];
+    norm_y = sqrt(norm_y);
+    
+    error = norm_x/norm_y;
+    for(Index j=0; j<this.n; j++)
+      x[j] /= norm_x;
+
+    ++count; if(count > 100) break;
+  }
+
+  return error;
+}
+
+// Main FISTA solver loop 
+inline MkFista.fista_2!(Float32 norm, io Float32 x[]) {
+  
+  // FISTA parameters
+  Float32 delta = 1.0/(norm*norm);
+  
+  Float32 x_old[]; x_old.resize(this.n);
+  Float32 u[]; u.resize(this.n);
+  Float32 w[]; w.resize(this.n);
+  Float32 y[]; y.resize(this.m);
+
+  // initialize variables
+  x.resize(this.n);
+  for(Index j=0; j<this.n; j++)
+    x[j] = 0.0;
+
+  Float32 t1 = 1, t2 = 1;
+  Float32 error = 0, error_old = 0;
+  for(Index ite = 0; ite < 50; ++ite) 
+  {
+    error_old = error;
+    x_old = x.clone();
+
+    for(Index i=0; i<this.m; ++i) 
+    {
+      y[i] = 0.0;
+      for(Index j=0; j<this.n; j++)
+        y[i] += this.A[i][j]*u[j];
+      y[i] -= this.b[i];
+    }
+    
+    for(Index j=0; j<this.n; j++) 
+    {
+      w[j] = 0.0;
+      for(Index i=0; i<this.m; ++i)
+        w[j] += delta * this.At[j][i]*y[i];
+      u[j] -= w[j];
+      x[j] = u[j];
+    }
+
+    this.shrink(x, delta * this.lambda);  
+ 
+    error = 0.0;
+    for(Index j=0; j<this.n; j++)
+    {
+      x_old[j] -= x[j];
+      error += x_old[j] *x_old[j]; 
+    }
+    error = sqrt(error);
+
+   if( abs(error_old - error) < this.lambda_tol)
+     break;
+
+   else
+   {
+      t1 = t2;
+      t2 = 0.5 + 0.5*sqrt(1+4*t1*t1);
+      for(Index j=0; j<this.n; j++)
+      {
+        x_old[j] *= (1 - t1)/t2; 
+        u[j] = x[j] + x_old[j];
+      }
+    }
+  }
+}
+
+// We solve lambda * ||x||_1 + 0.5 * ||Ax - b||_2^2
+function MkFista.fista(
+  Float32 lambda,
+  Vec3 training[][],
+  Vec3 target[],
+  io Float32 x[]) 
+{
+  MkFista me_fista;
+  me_fista.lambda = lambda;
+  me_fista.init(training, target);
+  me_fista.fista_2(me_fista.fista_(), x);
+}

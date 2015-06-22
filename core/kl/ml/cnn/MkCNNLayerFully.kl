@@ -1,0 +1,196 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require MLKL; 
+
+
+/**************************************************************************************************/
+/*                                          Fully-connected Layer                                 */
+object MkCNNLayerFully : MkCNNLayerBase {
+  protected MkCNNFilterInterface filter;
+};
+
+function MkCNNLayerFully(
+  Index activation,
+  Index in_size, 
+  Index out_size) 
+{
+  this.init(activation, in_size, out_size, in_size * out_size, out_size);
+  this.filter = MkCNNFilterNone();
+}
+
+public MkCNNLayerFully.display() {
+  this.parent.display();
+  report("\nMkCNNLayerFully Attributs");
+  report("Filter " + this.filter);
+}
+
+public Index MkCNNLayerFully.connectionSize() {
+  return this.in_size * this.out_size + this.out_size;
+}
+
+public Index MkCNNLayerFully.fanInSize() {
+  return this.in_size;
+}
+
+operator MkCNNLayerFullyFprop_task<<<i>>>(
+  Ref<MkCNNActivationFunctionInterface> h,
+  Index in_size,
+  Index out_size,
+  Float64 w[],
+  Float64 b[],
+  Float64 ins[],
+  io Float64 output[]) 
+{
+  Float64 z = 0.0;
+  for(Index c=0; c<in_size; c++)
+    z += w[c*out_size + i] * ins[c];
+  z += b[i];
+  output[i] = h.f(z);
+}
+
+public Float64[] MkCNNLayerFully.fprop!(Float64 ins[], Index index) {
+ 
+  Float64 output[] = this.output[index];
+  
+  MkCNNLayerFullyFprop_task<<<this.out_size>>>(
+    this.activationFunction(),
+    this.inSize(), 
+    this.outSize(), 
+    this.weight(),
+    this.bias(),
+    ins,
+    output);
+
+  Float64 outs[] = this.filter.filterFProp(this.output[index], index);
+  return (this.next() != null) ? this.next().fprop(outs, index) : outs;
+}
+
+operator MkCNNLayerFullyBprop_task_1<<<c>>>(
+  Ref<MkCNNActivationFunctionInterface> prev_h,
+  Index out_size,
+  Float64 prev_out[],
+  Float64 w[],
+  Float64 current_delta[],
+  io Float64 prev_delta[]) 
+{
+  prev_delta[c] = 0.0;
+  for(Index r=0; r<out_size; ++r)
+    prev_delta[c] += current_delta[r] * w[c*out_size+r];
+  prev_delta[c] *= prev_h.df(prev_out[c]);
+}
+
+operator MkCNNLayerFullyBprop_task_2<<<i>>>(
+  Index in_size,
+  Index out_size,
+  Float64 prev_out[],
+  Float64 current_delta[],
+  io Float64 dw[],
+  io Float64 db[]) 
+{
+  for (Index c = 0; c < in_size; c++) 
+    dw[c*out_size+i] += current_delta[i] * prev_out[c]; 
+  db[i] += current_delta[i];
+}
+
+public Float64[] MkCNNLayerFully.bprop!(Float64 current_delta[], Index index) {
+  
+  Float64 prev_delta[] = this.prev_delta[index];
+  MkCNNLayerFullyBprop_task_1<<<this.in_size>>>(
+    this.prev().activationFunction(),
+    this.outSize(),
+    this.prev().output(index),
+    this.weight(),
+    this.filter.filterBProp(current_delta, index),
+    prev_delta);
+
+  Float64 db[] = this.db[index];
+  Float64 dw[] = this.dw[index];
+  MkCNNLayerFullyBprop_task_2<<<this.out_size>>>(
+    this.inSize(),
+    this.outSize(),
+    this.prev().output(index),
+    this.filter.filterBProp(current_delta, index), 
+    dw,
+    db);
+
+  return this.prev().bprop(this.prev_delta[index], index);
+}
+
+operator MkCNNLayerFullyBprop2nd_task<<<c>>>(
+  Ref<MkCNNActivationFunctionInterface> prev_h,
+  Index out_size,
+  Float64 w[],
+  Float64 prev_out[],
+  Float64 current_delta2[],
+  io Float64 w_hessian[],
+  io Float64 prev_delta2[]) 
+{
+  prev_delta2[c] = 0.0;
+  for (Index r = 0; r < out_size; r++) 
+  {
+    prev_delta2[c] += current_delta2[r] * w[c*out_size + r] * w[c*out_size + r];
+    w_hessian[c*out_size + r] += current_delta2[r] * prev_out[c] * prev_out[c];
+  }
+  prev_delta2[c] *= prev_h.df(prev_out[c]) * prev_h.df(prev_out[c]);
+}
+
+public Float64[] MkCNNLayerFully.bprop2nd!(Float64 current_delta2[]) {
+ 
+  for (Index r=0; r<this.out_size; r++)
+    this.b_hessian[r] += current_delta2[r];
+
+  Float64 prev_delta2[] = this.prev_delta2;
+  Float64 w_hessian[] = this.w_hessian;
+  MkCNNLayerFullyBprop2nd_task<<<this.in_size>>>(
+    this.prev().activationFunction(),
+    this.outSize(),
+    this.weight(),
+    this.prev().output(0), 
+    current_delta2,
+    w_hessian,
+    prev_delta2);
+
+  return this.prev().bprop2nd(this.prev_delta2);
+}
+/*                                          Fully-connected Layer                                 */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                             Drop-out Layer                                     */
+object MkCNNLayerDropout : MkCNNLayerFully {};
+
+function MkCNNLayerDropout(
+  Index activation,
+  Index in_size, 
+  Index out_size, 
+  Index weight_size, 
+  Index bias_size) 
+{
+  this.init(activation, in_size, out_size, weight_size, bias_size);
+  this.filter = MkCNNDropout();
+}
+
+public MkCNNLayerDropout.dropoutRate!(Float64 rate) {
+  this.filter.dropoutRate(rate);
+}
+
+// Set dropout-context (training-phase or test-phase)
+public MkCNNLayerDropout.context!(Index ctx) {
+  this.filter.context(ctx);
+}
+
+private MkCNNLayerDropout.postUpdate!() {
+  this.filter.endBatch();
+}
+/*                                             Drop-out Layer                                     */
+/**************************************************************************************************/

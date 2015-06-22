@@ -1,0 +1,204 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require Math;
+require MLKL; 
+
+
+/**************************************************************************************************/
+/*                                              Loss functions                                    */
+const Index MK_LOSS_FUNC_MSE = 0;
+const Index MK_LOSS_FUNC_CE = 1;
+ 
+// Base object for loss function 
+interface MkCNNLossFunctionInterface {
+  Index mode();
+  Float32 f(Float32 y, Float32 t);
+  Float32 df(Float32 y, Float32 t);
+};
+
+object MkCNNLossFunctionBase : MkCNNLossFunctionInterface {
+  protected Index mode; // Mode, use to id the class
+};
+
+// Return the current mode, either MK_LOSS_FUNC_CE or MK_LOSS_FUNC_MSE
+public Index MkCNNLossFunctionBase.mode() {
+  return this.mode;
+}
+
+// Return the value of the function at point x
+public Float32 MkCNNLossFunctionBase.f(Float32 y, Float32 t) {
+  return 0.0;
+}
+
+// Return the value of the function derivate point x
+public Float32 MkCNNLossFunctionBase.df(Float32 y, Float32 t) {
+  return 0.0;
+}
+
+
+// Mean Square error 
+object MkCNNLossFunctionMSE : MkCNNLossFunctionBase {};
+
+function MkCNNLossFunctionMSE() {
+  this.mode = MK_LOSS_FUNC_MSE;
+}
+
+public Float32 MkCNNLossFunctionMSE.f(Float32 y, Float32 t) {
+  return (y - t) * (y - t) / 2.0;
+}
+
+public Float32 MkCNNLossFunctionMSE.df(Float32 y, Float32 t) {
+  return y - t;
+}
+
+ 
+// Cross-Entropy 
+object MkCNNLossFunctionCE : MkCNNLossFunctionBase {};
+
+function MkCNNLossFunctionCE() {
+  this.mode = MK_LOSS_FUNC_CE;
+}
+
+public Float32 MkCNNLossFunctionCE.f(Float32 y, Float32 t) {
+  return -t * log(y) - (1.0 - t) * log(1.0 - y);
+}
+
+public Float32 MkCNNLossFunctionCE.df(Float32 y, Float32 t) {
+  return (y - t) / (y * (1 - y));
+}
+/*                                              Loss functions                                    */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                          Activation functions                                  */
+const Index MK_ACTIVATION_FUNC_IDENTITY = 0;
+const Index MK_ACTIVATION_FUNC_SIGMOID = 1;
+const Index MK_ACTIVATION_FUNC_RECTIFIEDLINEAR = 2;
+const Index MK_ACTIVATION_FUNC_TANH = 3;
+ 
+// Base object for activation function 
+interface MkCNNActivationFunctionInterface {
+  Float64 f(Float64 x);
+  Float64 df(Float64 x);
+  Vec2 scale();
+  Index mode();
+};
+
+object MkCNNActivationFunctionBase : MkCNNActivationFunctionInterface {
+  protected Index mode; // Mode
+};
+
+// Return the current mode
+public Index MkCNNActivationFunctionBase.mode() {
+  return this.mode;
+}
+
+// Return the value of the function at point x
+public Float64 MkCNNActivationFunctionBase.f(Float64 x) {
+  return 0.0;
+}
+
+// Return the value of the function derivate point x
+public Float64 MkCNNActivationFunctionBase.df(Float64 x) {
+  return 0.0;
+}
+
+// Return the current scale
+public Vec2 MkCNNActivationFunctionBase.scale() {
+  return Vec2(1.0, 1.0);
+}
+
+
+// Identity 
+object MkCNNActivationFunctionIdentity : MkCNNActivationFunctionBase {};
+
+function MkCNNActivationFunctionIdentity() {
+  this.mode = MK_ACTIVATION_FUNC_IDENTITY;
+}
+
+public Float64 MkCNNActivationFunctionIdentity.f(Float64 x) {
+  return x;
+}
+
+public Float64 MkCNNActivationFunctionIdentity.df(Float64 x) {
+  return 1;
+}
+
+public Vec2 MkCNNActivationFunctionIdentity.scale() {
+  return Vec2(0.1, 0.9);
+}
+
+
+// Sigmoid
+object MkCNNActivationFunctionSigmoid : MkCNNActivationFunctionBase {};
+
+function MkCNNActivationFunctionSigmoid() {
+  this.mode = MK_ACTIVATION_FUNC_SIGMOID;
+}
+
+public Float64 MkCNNActivationFunctionSigmoid.f(Float64 x) {
+  return 1.0 / (1.0 + exp(-x));
+}
+
+public Float64 MkCNNActivationFunctionSigmoid.df(Float64 x) {
+  return x * (1.0 - x);
+}
+
+public Vec2 MkCNNActivationFunctionSigmoid.scale() {
+  return Vec2(0.1, 0.9);
+}
+
+
+// Linear
+object MkCNNActivationFunctionRectifiedLinear : MkCNNActivationFunctionBase {};
+
+function MkCNNActivationFunctionRectifiedLinear() {
+  this.mode = MK_ACTIVATION_FUNC_RECTIFIEDLINEAR;
+}
+
+public Float64 MkCNNActivationFunctionRectifiedLinear.f(Float64 x) {
+  return Math_max(0.0, x); 
+}
+
+public Float64 MkCNNActivationFunctionRectifiedLinear.df(Float64 x) {
+  return (x > 0.0) ? 1.0 : 0.0;
+}
+
+public Vec2 MkCNNActivationFunctionRectifiedLinear.scale() {
+  return Vec2(0.1, 0.9);
+}
+
+
+// Tangeante hyperbolic
+object MkCNNActivationFunctionTanH : MkCNNActivationFunctionBase {};
+
+function MkCNNActivationFunctionTanH() {
+  this.mode = MK_ACTIVATION_FUNC_TANH;
+}
+
+public Float64 MkCNNActivationFunctionTanH.f(Float64 x) {
+  Float64 ep = exp(x);
+  Float64 em = exp(-x); 
+  return (ep - em) / (ep + em);
+}
+
+public Float64 MkCNNActivationFunctionTanH.df(Float64 x) {
+  return 1.0 - x * x;
+}
+
+public Vec2 MkCNNActivationFunctionTanH.scale() {
+  return Vec2(-0.8, 0.8);
+}
+/*                                          Activation functions                                  */
+/**************************************************************************************************/
+

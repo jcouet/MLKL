@@ -1,0 +1,62 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project Medical                                                  */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+
+object MkMNIST {
+  Data handle;
+};    
+
+function Index[] MkMNIST.parseLabels(String path) 
+= "MkMNIST_parseLabels";
+
+function Float64[][] MkMNIST.parseImages(
+  String path,
+  Float64 scale_min,
+  Float64 scale_max,
+  Float64 x_padding,
+  Float64 y_padding) 
+= "MkMNIST_parseImages";
+
+function UniformRand(Float64 min, Float64 max, io Float64 res) 
+= "UniformRand_Float64";
+ 
+function UniformRand(Float32 min, Float32 max, io Float32 res) 
+= "UniformRand_Float32";
+ 
+function UniformRand(SInt32 min, SInt32 max, io SInt32 res) 
+= "UniformRand_SInt32";
+ 
+function UniformRand(UInt32 min, UInt32 max, io UInt32 res) 
+= "UniformRand_UInt32";
+ 
+
+function UniformRealDistribution(Float64 min, Float64 max, io Float64 dist[]) 
+= "UniformRealDistribution_Float64";
+ 
+function UniformRealDistribution(Float32 min, Float32 max, io Float32 dist[]) 
+= "UniformRealDistribution_Float32";
+ 
+function UniformRealDistribution(UInt32 min, UInt32 max, io UInt32 dist[]) 
+= "UniformRealDistribution_UInt32";
+ 
+function UniformRealDistribution(SInt32 min, SInt32 max, io SInt32 dist[]) 
+= "UniformRealDistribution_SInt32";
+ 
+function Bernoulli(Float64 p, io Boolean res) 
+= "Bernoulli_Float64";
+ 
+function Bernoulli(Float32 p, io Boolean res) 
+= "Bernoulli_Float32";
+ 
+function Bernoulli(Float64 p, io UInt32 res) 
+= "Bernoulli_Float64_UInt32";
+ 
+function Bernoulli(Float32 p, io UInt32 res) 
+= "Bernoulli_Float32_UInt32";

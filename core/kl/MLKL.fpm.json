@@ -1,0 +1,21 @@
+{
+  "version": "1.0.1",
+  "code": [
+  	"math/MkMaths.kl",
+    "math/optimization/MkFista.kl",
+    
+    "ml/svm/MkSVMKernel.kl",
+    "ml/svm/MkSVM.kl",
+    "ml/svm/MkSVMSMO.kl",
+    "ml/svm/MkSVMMultiClass.kl",
+
+    "ml/cnn/MkCNNUtils.kl",
+    "ml/cnn/MkCNNFunction.kl",
+    "ml/cnn/MkCNNDropout.kl",
+    "ml/cnn/MkCNNOptimizer.kl",
+    "ml/cnn/MkCNNLayer.kl",
+    "ml/cnn/MkCNNLayerPartial.kl",
+    "ml/cnn/MkCNNLayerFully.kl",
+    "ml/cnn/MkCNNNetwork.kl"
+  ]
+}

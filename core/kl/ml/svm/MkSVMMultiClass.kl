@@ -1,0 +1,255 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require MLKL;
+
+
+/**************************************************************************************************/
+/*                                 Multi-class Kernel Support Vector Machine                      */
+object MkSVMMultiClass : MkSVMInterface { 
+  Index input_count;
+  Float64 support_vectors[][];
+  Float64 weights[];
+  Float64 threshold;
+  MkSVMKernelInterface kernel;
+  MkKSVM machines[][];
+};
+
+function MkSVMMultiClass( 
+  Index inputs, 
+  MkSVMKernelInterface kernel, 
+  Index classes) 
+{
+  if(classes <= 1) return;
+  this.machines.resize(classes - 1);
+  for(Index i = 0; i < classes - 1; i++)
+  {
+    this.machines[i].resize(i + 1);
+    for(Index j = 0; j <= i; j++)
+      this.machines[i][j] = MkKSVM(kernel, inputs);
+  }
+}
+
+// Constructs a new Multi-class Kernel Support Vector Machine
+function MkSVMMultiClass(MkKSVM machines[][]) {
+  if(machines.size() < 1) return;
+  this.machines = machines;
+}
+
+// Computes the given input to produce the corresponding output
+function Float64 MkSVMMultiClass.compute!(Float64 inputs[]) {
+  SInt32 label = this.compute2(inputs);
+  return Float64(label);
+}
+
+// Computes the given input to produce the corresponding output
+function SInt32 MkSVMMultiClass.compute2!(Float64 inputs[]) {
+  SInt32 votes[];
+  return this.compute(inputs, votes);
+}
+
+// Computes the given input to produce the corresponding output
+// A paralleliser
+function SInt32 MkSVMMultiClass.compute!(
+  Float64 inputs[],
+  io SInt32 votes[]) 
+{
+  Index classes = this.machines.size() + 1;
+
+  // out variables cannot be passed into delegates,
+  // so will be creating a copy for the vote array.
+  SInt32 voting[]; voting.resize(classes);
+
+  // For each class
+  for(Index i = 0; i < classes; i++) // A paralleliser
+  {
+    // For each other class
+    for (Index j = 0; j < i; j++)
+    {
+      if(i==j) break;
+      
+      // Compute the two-class problem
+      Float64 answer = (i > j)?this.machines[i-1][j].compute(inputs):this.machines[j-1][i].compute(inputs);
+      if (answer < 0) voting[i] += 1; // Class i has won
+      else voting[j] += 1; // Class j has won
+    }
+  }
+
+  // Voting finished.
+  votes = voting;
+
+  // Select class which maximum number of votes
+  SInt32 output = -1;
+  SInt32 best = -1;
+  for(Index c=0; c<votes.size(); ++c)
+  {
+    if(votes[c] > output)
+    { 
+      best = c;
+      output = votes[c];
+    }
+  }
+
+  return best; 
+}
+
+function Float64[] MkSVMMultiClass.compute!(Float64 inputs[][]) {
+  Float64 outputs[];
+  outputs.resize(inputs.size());
+  for(Index i = 0; i < inputs.size(); i++)
+    outputs[i] = this.compute(inputs[i]);
+  return outputs;
+}
+
+function MkSVMMultiClass.resize!(Index size) {
+  this.support_vectors.resize(size);
+  this.weights.resize(size);
+}
+
+function MkSVMMultiClass.setSupportVectors!(Index index, Float64 inputs[]) {
+  this.support_vectors[index] = inputs;
+}    
+
+function MkSVMMultiClass.setWeights!(Index index, Float64 weight) {
+  this.weights[index] = weight;
+}
+
+function MkSVMMultiClass.setThreshold!(Float64 threshold) {
+  this.threshold = threshold;
+}
+
+function Float64 MkSVMMultiClass.func!(Float64 x[], Float64 y[]) {
+  return this.kernel.func(x, y);
+}
+/*                                 Multi-class Kernel Support Vector Machine                      */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                             Multi-class Kernel Support Vector Machine Learning                 */
+object MkSVMMultiClassLearning { 
+  Float64 inputs[][];
+  SInt32 outputs[];
+  MkSVMMultiClass msvm;
+};
+
+// Constructs a new Multi-class Kernel Support Vector Machine
+function MkSVMMultiClassLearning(
+  MkSVMMultiClass msvm,
+  Float64 inputs[][],
+  SInt32 outputs[]) 
+{
+  this.msvm = msvm;
+
+  // Learning data
+  this.inputs = inputs;
+  this.outputs = outputs;
+}
+
+function Float64 MkSVMMultiClassLearning.run!() {
+  return this.run(true);
+}
+
+// To parallalize
+operator MkSVMMultiClassLearningRun_task<<<i>>>(Ref<MkSVMMultiClassLearning> me_svm_mc_learning) {
+  Index classes = me_svm_mc_learning.msvm.machines.size() + 1;
+  // For each class j
+  for (Index j = 0; j < i; j++)
+  {
+    if(i == j) break;
+
+    // Retrieve the associated classes
+    SInt32 idx[];
+    for(Index k=0; k<me_svm_mc_learning.outputs.size(); ++k)
+      if( (me_svm_mc_learning.outputs[k] == i) || (me_svm_mc_learning.outputs[k] == j) )
+        idx.push(k);
+
+    Float64 sub_inputs[][];
+    SInt32 sub_outputs[];
+    for(Index k=0; k<idx.size(); ++k)
+    {    
+      sub_inputs.push(me_svm_mc_learning.inputs[idx[k]]);
+      Index index = me_svm_mc_learning.outputs[idx[k]];
+      if(index == i) sub_outputs.push(-1);
+      else sub_outputs.push(1);
+    }
+
+    // Train the machine on the two-class problem.
+    MkSVMSMO smo = MkSVMSMO();
+    if(i > j) smo = MkSVMSMO(me_svm_mc_learning.msvm.machines[i-1][j], sub_inputs, sub_outputs);
+    else if(i < j)smo = MkSVMSMO(me_svm_mc_learning.msvm.machines[j-1][i], sub_inputs, sub_outputs);
+    smo.run(false);
+  }
+}
+
+function Float64 MkSVMMultiClassLearning.run!(Boolean compute_error) {
+
+  Index classes = this.msvm.machines.size() + 1;
+  //MkSVMMultiClass_LearningRun_task<<<classes>>>(this);
+  for (Index i=0; i < classes; i++)
+  {
+    // For each class j
+    report("i " + i);
+    for (Index j = 0; j < i; j++)
+    {
+      report("j 1" + j);
+
+      if(i == j) break;
+
+      // Retrieve the associated classes
+      SInt32 idx[];
+      for(Index k=0; k<this.outputs.size(); ++k)
+        if( (this.outputs[k] == i) || (this.outputs[k] == j) )
+          idx.push(k);
+    
+      report("j 2" + j);
+
+      Float64 sub_inputs[][];
+      SInt32 sub_outputs[];
+      for(Index k=0; k<idx.size(); ++k)
+      {    
+        sub_inputs.push(this.inputs[idx[k]]);
+        Index index = this.outputs[idx[k]];
+        if(index == i) sub_outputs.push(-1);
+        else sub_outputs.push(1);
+      }
+
+      // Train the machine on the two-class problem.
+      report("j 3" + j);
+
+      MkSVMSMO smo = MkSVMSMO();
+      if(i > j) smo = MkSVMSMO(this.msvm.machines[i-1][j], sub_inputs, sub_outputs);
+      else if(i < j)smo = MkSVMSMO(this.msvm.machines[j-1][i], sub_inputs, sub_outputs);
+      smo.run(false);
+    }
+  }
+
+  // Compute error if required.
+  return (compute_error) ? this.computeError(this.inputs, this.outputs) : 0.0;
+}
+
+function Float64 MkSVMMultiClassLearning.computeError!(
+  Float64 inputs[][], 
+  SInt32 expected_outputs[])
+{
+  // Compute errors
+  Index count = 0;
+  for (Index i = 0; i < inputs.size(); i++)
+  {
+    if (this.msvm.compute(inputs[i]) != expected_outputs[i])
+      count++;
+  }
+
+  // Return misclassification error ratio
+  return Float64(count) / Float64(inputs.size());
+}
+/*                             Multi-class Kernel Support Vector Machine Learning                 */
+/**************************************************************************************************/

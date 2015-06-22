@@ -1,0 +1,465 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require MLKL; 
+
+
+const Index MK_GRAD_CHECK_ALL = 0;
+const Index MK_GRAD_CHECK_FIRST = 1;
+const Index MK_GRAD_CHECK_RANDOM = 2;
+
+
+object MkCNNNetwork {
+  private String name;
+  private MkCCNConfig config;
+  private MkCNNOptimizerInterface optimizer;
+  private MkCNNLossFunctionInterface loss_function;
+  private MkCNNLayers layers;
+};
+
+private MkCNNNetwork.init!(
+  Index loss_function,
+  Index optimizer,
+  String name) 
+{
+  this.name = name;
+  this.layers = MkCNNLayers();
+
+  switch(loss_function)
+  {
+    case MK_LOSS_FUNC_MSE:
+      this.loss_function = MkCNNLossFunctionMSE();
+    break;
+    
+    case MK_LOSS_FUNC_CE:
+      this.loss_function = MkCNNLossFunctionCE();
+    break;
+
+    default :
+      this.loss_function = MkCNNLossFunctionMSE();
+    break;
+  }
+
+  switch(optimizer)
+  {
+    case MK_OPTIMIZER_GD:
+      this.optimizer = MkCNNOptimizerGD();
+    break;
+    
+    case MK_OPTIMIZER_GDLM:
+      this.optimizer = MkCNNOptimizerGDLM();
+    break;
+
+    default :
+      this.optimizer = MkCNNOptimizerGD();
+    break;
+  }
+}
+
+public MkCNNNetwork(
+  Index loss_function,
+  Index optimizer,
+  String name) 
+{
+  this.init(loss_function, optimizer, name);
+}
+
+public MkCNNNetwork(
+  Index loss_function,
+  Index optimizer) 
+{
+  this.init(loss_function, optimizer, "");
+}
+
+public MkCNNNetwork(
+  Index loss_function,
+  Index optimizer,
+  String name,
+  io MkCNNLayerInterface layers[]) 
+{
+  this.init(loss_function, optimizer, name);
+  this.add(layers);
+}
+
+public MkCNNNetwork(
+  Index loss_function,
+  Index optimizer,
+  io MkCNNLayerInterface layers[]) 
+{
+  this.init(loss_function, optimizer, "");
+  this.add(layers);
+}
+
+public MkCNNNetwork.add!(io MkCNNLayerInterface layer) {
+  this.layers.add(layer);
+}
+
+public MkCNNNetwork.add!(io MkCNNLayerInterface layers[]) {
+  for(Index i=0; i<layers.size(); ++i)
+    this.layers.add(layers[i]);
+}
+
+public MkCNNNetwork.display() {
+  report("\nMkCNNNetwork Attributs ");
+  report("config "        + this.config);
+  report("name "          + this.name);
+  report("optimizer "     + this.optimizer);
+  report("loss_function " + this.loss_function);
+  this.layers.display();
+}
+
+// input data dimension of whole networks
+public Index MkCNNNetwork.inDim() { 
+  return this.layers.head().inSize(); 
+}
+
+// output data dimension of whole networks
+public Index MkCNNNetwork.outDim() { 
+  return this.layers.tail().outSize(); 
+}
+
+public String MkCNNNetwork.name() { 
+  return this.name;
+}
+
+public Ref<MkCNNOptimizerInterface> MkCNNNetwork.optimizer() {
+  return this.optimizer;
+}
+
+// training conv-net
+public MkCNNNetwork.train!(
+  Float64 ins[][], 
+  Index t[], 
+  Float64 test_ins[][], 
+  Index test_t[],
+  Size batch_size, 
+  Index epoch)
+{
+  this.initWeight();
+  this.optimizer.reset();
+
+  MkEnumerateEpoch on_epoch_enumerate(); 
+  MkEnumerateData on_batch_enumerate(ins.size(), batch_size); 
+
+  for (Index iter=0; iter<epoch; iter++) 
+  {
+    if (this.optimizer.requiresHessian())
+      this.calcHessian(ins, 500);
+
+    on_batch_enumerate.reset();
+    for (Index i=0; i<ins.size(); i+=batch_size) 
+    {
+      this.trainOnce(i, ins, t, Math_min(batch_size, ins.size() - i));
+      //on_batch_enumerate.update();
+    }
+    on_epoch_enumerate.update(this, test_ins, test_t);
+  }
+}
+
+public Float64[] MkCNNNetwork.predict!(Float64 ins[]) {
+  return this.fprop(ins, 0);
+}
+
+public MkCNNNetworkResult MkCNNNetwork.test!(Float64 ins[][], Index t[]) {
+  
+  MkCNNNetworkResult test_result;
+  for (Index i = 0; i < ins.size(); i++) 
+  {
+    Float64 outs[] = this.predict(ins[i]);
+    Index predicted = MaxIndex(outs);
+
+    Index actual = t[i];
+    if (predicted == actual) test_result.num_success++;
+
+    test_result.num_total++;
+    //test_result.confusion_matrix[predicted][actual]+=1.0;
+  }
+  return test_result;
+}
+
+/*
+  private Float64 MkCNNNetwork.calcDeltaDiff!(
+    Float64 ins[][], 
+    Float64 v[][], 
+    Index data_size, 
+    io Float64 w[], 
+    io Float64 dw[], 
+    Index check_index) 
+  {
+    Float64 delta = 1e-10;
+
+    for(Index i=0; i<dw.size(); ++i)
+      dw[i] = 0.0;
+   
+    // calculate dw/dE by bprop
+    for (Index i = 0; i < data_size; i++) 
+    {
+      Float64 outs[] = this.fprop(ins[i], 0);
+      this.bprop(outs, v[i], 0);
+    }
+    Float64 delta_by_bprop = dw[check_index];
+
+    // calculate dw/dE by numeric
+    Float64 prev_w = w[check_index];
+    w[check_index] = prev_w + delta;
+    Float64 f_p = 0.0;
+    for (Index i = 0; i < data_size; i++) 
+    {
+      Float64 outs[] = this.fprop(ins[i], 0);
+      f_p += this.getLoss(outs, v[i]);
+    }
+
+    Float64 f_m = 0.0;
+    w[check_index] = prev_w - delta;
+    for (Index i = 0; i < data_size; i++) 
+    {
+      Float64 outs[] = this.fprop(ins[i], 0);
+      f_m += this.getLoss(outs, v[i]);
+    }
+    w[check_index] = prev_w;
+
+    Float64 delta_by_numerical = (f_p - f_m) / (2.0 * delta);
+    return abs(delta_by_bprop - delta_by_numerical);
+  }
+
+  public Boolean MkCNNNetwork.gradientCheck!(
+    Float64 ins[][], 
+    Index t[], 
+    Index data_size, 
+    Float64 eps, 
+    Index mode) 
+  {
+    if(this.layers.empty()) return false;
+
+    Float64 v[][];
+    this.label2Vector(0, data_size, t, v);
+
+    Ref<MkCNNLayerInterface> current = this.layers.head();
+    while((current = current.next()) != null) 
+    { 
+      // ignore first input layer
+      Float64 w[] = current.weight();
+      Float64 b[] = current.bias();
+      Float64 dw[] = current.weightDiff(0);
+      Float64 db[] = current.biasDiff(0);
+
+      if (w.size() == 0) continue;
+      
+      switch (mode) 
+      {
+        case MK_GRAD_CHECK_ALL:
+          for (Index i = 0; i < w.size(); i++) 
+          {
+            if (this.calcDeltaDiff(ins, v, data_size, w, dw, i) > eps) 
+              return false;
+          }
+          for (Index i = 0; i < b.size(); i++) 
+          {
+            if (this.calcDeltaDiff(ins, v, data_size, b, db, i) > eps) 
+              return false;
+          }
+        break;
+        
+        case MK_GRAD_CHECK_FIRST:
+          if (this.calcDeltaDiff(ins, v, data_size, w, dw, 0) > eps) 
+            return false;
+          if (this.calcDeltaDiff(ins, v, data_size, b, db, 0) > eps) 
+           false;
+        break;
+        
+        case MK_GRAD_CHECK_RANDOM:
+          for (Index i = 0; i < 10; i++) 
+          {
+            Index index; UniformRand(0, w.size() - 1, index);
+            if (this.calcDeltaDiff(ins, v, data_size, w, dw, index) > eps) 
+              return false;
+          }
+          for (Index i = 0; i < 10; i++) 
+          {
+              Index index; UniformRand(0, b.size() - 1, index);
+              if (this.calcDeltaDiff(ins, v, data_size, b, db, index) > eps) 
+                return false;
+          }
+        break;
+
+        default:
+          report("unknown grad-check type");
+          //throw nn_error("unknown grad-check type");
+        break;
+      }
+    }
+
+    return true;
+  }
+*/
+
+private MkCNNNetwork.initWeight!() {
+  this.layers.reset();
+}
+
+private Float64 MkCNNNetwork.targetValueMin() { 
+  return Float64(this.layers.tail().activationFunction().scale().x); 
+}
+
+private Float64 MkCNNNetwork.targetValueMax() { 
+  return Float64(this.layers.tail().activationFunction().scale().y); 
+}
+
+private MkCNNNetwork.label2Vector(
+  Index batch_index,
+  Index size, 
+  Index t[], 
+  io Float64 vec[][]) 
+{
+  Index out_dim = this.outDim();
+  if(size <= 0 || out_dim <= 0) return; 
+  
+  Float64 temp[]; temp.resize(out_dim);
+  for (Index i = 0; i < out_dim; i++) 
+    temp[i] = this.targetValueMin();
+
+  vec.resize(size);
+  for (Index i = 0; i < size; i++) 
+  {
+    if(t[batch_index + i] >= out_dim) 
+      return;
+    vec[i] = temp.clone();
+    vec[i][t[batch_index + i]] = this.targetValueMax();
+  }
+}
+
+private MkCNNNetwork.trainOnce!(
+  Index batch_index,
+  Float64 ins[][], 
+  Index t[], 
+  Index size) 
+{
+  Float64 v[][];
+  this.label2Vector(batch_index, size, t, v);
+  this.trainOnce(batch_index, ins, v, size);
+}
+
+private MkCNNNetwork.trainOnce!(
+  Index batch_index,
+  Float64 ins[][], 
+  Float64 t[][], 
+  Index size) 
+{
+  Ref<MkCNNOptimizerInterface> opti = this.optimizer;
+  if(size == 1) 
+  {
+    Float64 outs[] = this.fprop(ins[0], 0);
+    this.bprop(outs, t[0], 0);
+    this.layers.updateWeights(opti, 1, 1);
+  } 
+
+  else 
+  {
+    Index num_tasks = size < this.config.taskSize() ? 1 : this.config.taskSize();
+    Index data_per_thread = size / num_tasks;
+    Index remaining = size;
+
+    for (Index i = 0; i < num_tasks; i++) 
+    {
+      Index num = (i == (num_tasks - 1)) ? remaining : data_per_thread;
+
+      for (Index j = 0; j < num; j++) 
+      {
+        Float64 outs[] = this.fprop(ins[batch_index + i*num + j], i); 
+        this.bprop(outs, t[i*num + j], i);
+      }
+      remaining -= num;
+    }
+
+    this.layers.updateWeights(opti, num_tasks, size);
+  }
+}   
+
+private Boolean MkCNNNetwork.isCanonicalLink(
+  Ref<MkCNNActivationFunctionInterface> h, 
+  Ref<MkCNNLossFunctionInterface> e) 
+{  
+  if (h.mode() == MK_ACTIVATION_FUNC_SIGMOID && e.mode() == MK_LOSS_FUNC_CE) 
+    return true;
+
+  if (h.mode() == MK_ACTIVATION_FUNC_TANH && e.mode() == MK_LOSS_FUNC_CE) 
+    return true;
+
+  if (h.mode() == MK_ACTIVATION_FUNC_IDENTITY && e.mode() == MK_LOSS_FUNC_MSE) 
+    return true;
+
+  return false;
+}
+
+private MkCNNNetwork.calcHessian!(Float64 ins[][], Index size_init_hessian) {
+
+  Index size = Math_min(ins.size(), size_init_hessian);
+
+  for(Index i=0; i<size; i++) 
+  {
+    Float64 outs[] = this.fprop(ins[i], 0);
+    this.bprop2nd(outs);
+  }
+  this.layers.divideHessian(size);
+}
+
+private Float64 MkCNNNetwork.getLoss(Float64 outs[], Float64 t[]) {
+  //assert(outs.size() == (Index)t.size());
+  Float64 e = 0.0;
+  for (Index i = 0; i < outs.size(); i++)
+    e += Float64(this.loss_function.f(outs[i], t[i]));
+  return e;
+}
+
+private Float64[] MkCNNNetwork.fprop!(Float64 ins[], Index idx) {
+  if (ins.size() != this.inDim())
+    return ins;
+  return this.layers.head().fprop(ins, idx);
+}
+
+private MkCNNNetwork.bprop!(
+  Float64 outs[], 
+  Float64 t[], 
+  Index idx) 
+{
+  Float64 delta[]; delta.resize(this.outDim());
+  
+  Ref<MkCNNActivationFunctionInterface> h = this.layers.tail().activationFunction();
+  if (this.isCanonicalLink(h, this.loss_function)) 
+  {
+    for (Index i = 0; i < this.outDim(); i++)
+      delta[i] = outs[i] - t[i];  
+  } 
+  else 
+  {
+    for (Index i = 0; i < this.outDim(); i++)
+      delta[i] = this.loss_function.df(outs[i], t[i]) * h.df(outs[i]);
+  }
+ 
+  this.layers.tail().bprop(delta, idx);
+}
+
+private MkCNNNetwork.bprop2nd!(Float64 outs[]) {
+  Float64 delta[]; delta.resize(this.outDim());
+  
+  Ref<MkCNNActivationFunctionInterface> h = this.layers.tail().activationFunction();
+  if (this.isCanonicalLink(h, this.loss_function)) 
+  {
+    for (Index i = 0; i < this.outDim(); i++)
+      delta[i] = this.targetValueMax() * h.df(outs[i]);  
+  } 
+  else 
+  {
+    for (Index i = 0; i < this.outDim(); i++)
+      delta[i] = this.targetValueMax() * h.df(outs[i]) * h.df(outs[i]); // FIXME
+  }
+
+  this.layers.tail().bprop2nd(delta);
+}

@@ -1,0 +1,87 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require MLKL; 
+require MkMNIST;
+
+
+function Boolean[] CreateConnections() {
+  Boolean O = true;
+  Boolean X = false;
+
+  Boolean c[]; 
+  c.push(O); c.push(X); c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(X);  
+  c.push(X); c.push(O); c.push(O); c.push(O); c.push(O); c.push(X); c.push(O); c.push(O);  
+  c.push(O); c.push(O); c.push(X); c.push(X); c.push(X); c.push(O); c.push(O); c.push(O);  
+  c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(O); c.push(X); c.push(O);  
+  c.push(O); c.push(O); c.push(O); c.push(X); c.push(X); c.push(X); c.push(O); c.push(O);  
+  c.push(O); c.push(X); c.push(X); c.push(O); c.push(X); c.push(O); c.push(O); c.push(O);  
+  c.push(X); c.push(O); c.push(O); c.push(O); c.push(X); c.push(X); c.push(O); c.push(O);  
+  c.push(O); c.push(O); c.push(X); c.push(X); c.push(O); c.push(X); c.push(O); c.push(O);  
+  c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(X); c.push(X); c.push(O);  
+  c.push(O); c.push(O); c.push(O); c.push(X); c.push(O); c.push(O); c.push(X); c.push(O);  
+  c.push(X); c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(X); c.push(X);  
+  c.push(O); c.push(O); c.push(O); c.push(O); c.push(X); c.push(O); c.push(O); c.push(O);  
+  return c;
+}
+
+function MkCNNLayerInterface[] CreateLayers() {
+  MkCNNLayerInterface layers[];
+  layers.push(MkCNNLayerConvolutional(MK_ACTIVATION_FUNC_TANH,  32, 32, 5,  1, 6));
+  layers.push(MkCNNLayerAveragePooling(MK_ACTIVATION_FUNC_TANH, 28, 28, 6,  2));
+  layers.push(MkCNNLayerConvolutional(MK_ACTIVATION_FUNC_TANH,  14, 14, 5,  6,  16, MkCNNConnectionTable(CreateConnections(), 6, 16)));
+  layers.push(MkCNNLayerAveragePooling(MK_ACTIVATION_FUNC_TANH, 10, 10, 16, 2));
+  layers.push(MkCNNLayerConvolutional(MK_ACTIVATION_FUNC_TANH,  5,  5,  5,  16, 120));
+  layers.push(MkCNNLayerFully(MK_ACTIVATION_FUNC_TANH, 120, 10));
+  return layers;
+}
+
+function LoadMNIST(
+  io Float64 train_images[][],
+  io Float64 test_images[][],
+  io Index train_labels[],
+  io Index test_labels[]) 
+{
+  MkMNIST mnist();
+  train_images = mnist.parseImages(
+    "C:\\Users\\Julien\\Documents\\Dev\\MLKL\\data\\mnist\\train-images.idx3-ubyte",
+    -1.0, 1.0, 2, 2);
+
+  test_images = mnist.parseImages(
+    "C:\\Users\\Julien\\Documents\\Dev\\MLKL\\data\\mnist\\t10k-images.idx3-ubyte",
+    -1.0, 1.0, 2, 2);
+
+  train_labels = mnist.parseLabels(
+    "C:\\Users\\Julien\\Documents\\Dev\\MLKL\\data\\mnist\\train-labels.idx1-ubyte");
+
+  test_labels = mnist.parseLabels(
+    "C:\\Users\\Julien\\Documents\\Dev\\MLKL\\data\\mnist\\t10k-labels.idx1-ubyte"); 
+}
+
+operator entry() {
+  
+  MkCNNLayerInterface layers[] = CreateLayers();
+  MkCNNNetwork nn(MK_LOSS_FUNC_MSE, MK_OPTIMIZER_GDLM, layers);
+ 
+  Float64 train_images[][], test_images[][];
+  Index train_labels[], test_labels[];
+  LoadMNIST(train_images, test_images, train_labels, test_labels);
+
+  Index minibatch_size = 10;
+  Ref<MkCNNOptimizerInterface> opti = nn.optimizer();
+  nn.optimizer().learningRate(nn.optimizer().learningRate()* sqrt(minibatch_size));
+
+  nn.train( train_images, train_labels, 
+            test_images, test_labels,
+            minibatch_size, 5);
+
+  report("It is ok");
+}
+

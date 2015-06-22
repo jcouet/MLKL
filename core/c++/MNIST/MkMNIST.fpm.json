@@ -1,0 +1,4 @@
+{
+  "libs": "MkMNIST",
+  "code": ["MkMNIST.kl" ]
+}
