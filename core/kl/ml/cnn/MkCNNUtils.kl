@@ -128,11 +128,11 @@ function MkCNNConnectionTable(
   this.connected = ar.clone();
 }
 
-public Index MkCNNConnection.first(Index pair_index) {
+function Index MkCNNConnection.first(Index pair_index) {
   return this.pairs[pair_index].first;
 }
 
-public Index MkCNNConnection.second(Index pair_index) {
+function Index MkCNNConnection.second(Index pair_index) {
   return this.pairs[pair_index].second;
 }
 

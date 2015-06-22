@@ -21,14 +21,14 @@ interface MkCNNLayerInterface {
 	Index paramSize();
 	Index fanInSize() ;
 	Index connectionSize();
-  Float64[] output(Index worker_index);
-  Float64[] delta(Index worker_index);
+  Float64[] output(Index index);
+  Float64[] delta(Index index);
   Float64[] weight();
   Float64[] bias();
   Float64[] weightDiff(Index index);
   Float64[] biasDiff(Index index);
-  Float64[] fprop!(Float64 ins[], Index worker_index);
-  Float64[] bprop!(Float64 current_delta[], Index worker_index);
+  Float64[] fprop!(Float64 ins[], Index index);
+  Float64[] bprop!(Float64 current_delta[], Index index);
   Float64[] bprop2nd!(Float64 current_delta2[]);
   Boolean connect!(io MkCNNLayerInterface tail);
   initWeight!();
@@ -165,12 +165,12 @@ public Index MkCNNLayerBase.connectionSize() {
   return 0;
 }
 
-protected Float64[] MkCNNLayerBase.output(Index worker_index) { 
-	return this.output[worker_index]; 
+protected Float64[] MkCNNLayerBase.output(Index index) { 
+	return this.output[index]; 
 }
 
-protected Float64[] MkCNNLayerBase.delta(Index worker_index) { 
-	return this.prev_delta[worker_index]; 
+protected Float64[] MkCNNLayerBase.delta(Index index) { 
+	return this.prev_delta[index]; 
 }
 
 protected Float64[] MkCNNLayerBase.weight() { 
@@ -307,11 +307,11 @@ public MkCNNLayerBase.divideHessian!(Index denominator) {
   for(Index i=0; i<this.b_hessian.size(); ++i) this.b_hessian[i] /= Float64(denominator);   
 }
 
-public Float64[] MkCNNLayerBase.fprop!(Float64 ins[], Index worker_index) {
+public Float64[] MkCNNLayerBase.fprop!(Float64 ins[], Index index) {
   Float64 temp[]; return temp;
 }
 
-public Float64[] MkCNNLayerBase.bprop!(Float64 current_delta[], Index worker_index) {
+public Float64[] MkCNNLayerBase.bprop!(Float64 current_delta[], Index index) {
   Float64 temp[]; return temp;
 }
 
@@ -352,37 +352,211 @@ std::basic_istream<Char, CharTraits>& operator >> (std::basic_istream<Char, Char
 
 /**************************************************************************************************/
 /*                                                Input Layer                                     */
-object MkCNNInputLayer : MkCNNLayerBase {};
+object MkCNNLayerInput : MkCNNLayerBase {};
 
-public MkCNNInputLayer() {
+public MkCNNLayerInput() {
   this.init(MK_ACTIVATION_FUNC_IDENTITY, 0, 0, 0, 0);
 }
 
-public Index MkCNNInputLayer.inSize() {
+public Index MkCNNLayerInput.inSize() {
   return (this.next() != null) ? this.next().inSize(): 0;
 }
 
-public Index MkCNNInputLayer.connectionSize() { 
+public Index MkCNNLayerInput.connectionSize() { 
   return this.inSize;
 }
 
-public Index MkCNNInputLayer.fanInSize() {
+public Index MkCNNLayerInput.fanInSize() {
   return 1;
 }
 
-public Float64[] MkCNNInputLayer.fprop!(Float64 ins[], Index worker_index) {
-  this.output[worker_index] = ins;
-  return (this.next()!= null) ? this.next().fprop(ins, worker_index) : this.output[worker_index];
+public Float64[] MkCNNLayerInput.fprop!(Float64 ins[], Index index) {
+  this.output[index] = ins;
+  return (this.next()!= null) ? this.next().fprop(ins, index) : this.output[index];
 }
 
-public Float64[] MkCNNInputLayer.bprop!(Float64 current_delta[], Index worker_index) {
+public Float64[] MkCNNLayerInput.bprop!(Float64 current_delta[], Index index) {
   return current_delta;
 }
 
-public Float64[] MkCNNInputLayer.bprop2nd!(Float64 current_delta2[]) {
+public Float64[] MkCNNLayerInput.bprop2nd!(Float64 current_delta2[]) {
   return current_delta2;
 }
 /*                                                Input Layer                                     */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                            Max-pooling Layer                                   */
+object MkCNNLayerMaxPooling : MkCNNLayerBase {
+  private Index out2in[][];
+  private Index in2out[][];
+  private Index out2in_max[];
+  private MkCNNIndex3D in_index;
+  private MkCNNIndex3D out_index;
+};
+
+private MkCNNLayerMaxPooling.connectKernel!(
+  Index pooling_size, 
+  Index outx, 
+  Index outy, 
+  Index c) 
+{
+  for (Index dy = 0; dy < pooling_size; dy++) 
+  {
+    for (Index dx = 0; dx < pooling_size; dx++) 
+    {
+      Index in_index = this.in_index.index(outx * pooling_size + dx, outy * pooling_size + dy, c);
+      Index out_index = this.out_index.index(outx, outy, c);
+      this.in2out[in_index] = out_index;
+      this.out2in[out_index].push(in_index);
+    }
+  }
+}
+
+private MkCNNLayerMaxPooling.initConnection!(
+  Index in_width, 
+  Index in_height, 
+  Index in_channels, 
+  Index pooling_size) 
+{
+  this.in2out.resize(this.in_index.size());
+  this.out2in.resize(this.out_index.size());
+  this.out2in_max.resize(this.out_index.size());
+  for (Index c = 0; c < this.in_index.depth; ++c)
+  {
+    for (Index y = 0; y < this.out_index.height; ++y)
+    {
+      for (Index x = 0; x < this.out_index.width; ++x)
+        this.connectKernel(pooling_size, x, y, c);
+    }
+  }
+}
+
+public MkCNNLayerMaxPooling(
+  Index activation,
+  Index in_width, 
+  Index in_height, 
+  Index in_channels, 
+  Index pooling_size) 
+{
+  this.init(
+    activation, 
+    in_width * in_height * in_channels, 
+    in_width * in_height * in_channels / (pooling_size*pooling_size), 
+    0, 0);
+
+  this.in_index = MkCNNIndex3D(in_width, in_height, in_channels);
+  this.in_index = MkCNNIndex3D(in_width / pooling_size, in_height / pooling_size, in_channels);
+     
+  //if ((in_width % pooling_size) || (in_height % pooling_size))
+  //  throw nn_error("width/height must be multiples of pooling size");
+ 
+  this.initConnection(in_width, in_height, in_channels, pooling_size);
+}
+
+public Index MkCNNLayerMaxPooling.connectionSize() { 
+  return this.out2in[0].size() * this.out2in.size();
+}
+
+public Index MkCNNLayerMaxPooling.fanInSize() {
+  return this.out2in[0].size();
+}
+
+operator MkCNNLayerMaxPoolingFprop_task<<<i>>>(
+  Float64 ins[],
+  Index out2in[][],
+  io Index out2in_max[],
+  io Float64 output[]) 
+{
+  Index in_index[] = out2in[i];
+  Float64 max_value = -10000000000000000;
+  
+  for (Index j=0; j<in_index.size(); ++j) 
+  {
+    if (ins[j] > max_value) 
+    {
+      max_value = ins[j];
+      out2in_max[i] = j;
+    }
+  }
+  output[i] = max_value;
+}
+
+public Float64[] MkCNNLayerMaxPooling.fprop!(Float64 ins[], Index index) {
+  
+  Index out2in[][] = this.out2in;
+  Index out2in_max[] = this.out2in_max;
+  Float64 output[] = this.output[index];
+
+  MkCNNLayerMaxPoolingFprop_task<<<this.out_size>>>(
+    ins,
+    out2in,
+    out2in_max,
+    output);
+ 
+  return (this.next()!= null) ? this.next().fprop(output, index) : output;
+}
+
+operator MkCNNLayerMaxPoolingBprop_task<<<i>>>(
+  Ref<MkCNNActivationFunctionInterface> prev_h,
+  Index out2in_max[],
+  Index in2out[][],
+  Float64 prev_out[],
+  Float64 current_delta[],
+  io Float64 prev_delta[]) 
+{
+  Index outi = in2out[i];
+  prev_delta[i] = (out2in_max[outi] == i) ? current_delta[outi] * prev_h.df(prev_out[i]) : 0.0;
+}
+
+public Float64[] MkCNNLayerMaxPooling.bprop!(Float64 current_delta[], Index index) {
+  
+  Float64 prev_delta[] = this.prev_delta[index];
+  Index in2out[][] = this.in2out;
+  Index out2in_max[] = this.out2in_max;
+ 
+  MkCNNLayerMaxPoolingBprop_task<<<this.in_size>>>(
+    this.prev().activationFunction(),
+    out2in_max,
+    in2out,
+    this.prev().output(index),
+    current_delta,
+    prev_delta);
+
+  return this.prev().bprop(this.prev_delta[index], index);
+}
+
+operator MkCNNLayerMaxPoolingBprop2nd_task<<<i>>>(
+  Ref<MkCNNActivationFunctionInterface> prev_h,
+  Index out2in_max[],
+  Index in2out[][],
+  Float64 prev_out[],
+  Float64 current_delta2[],
+  io Float64 prev_delta2[]) 
+{
+  Index outi = in2out[i];
+  prev_delta2[i] = (out2in_max[outi] == i) ? current_delta2[outi] * prev_h.df(prev_out[i]) * prev_h.df(prev_out[i]) : 0.0;
+}
+
+public Float64[] MkCNNLayerMaxPooling.bprop2nd!(Float64 current_delta2[]) {
+
+  Float64 prev_delta2[] = this.prev_delta2;
+  Index in2out[][] = this.in2out;
+  Index out2in_max[] = this.out2in_max;  
+  
+  MkCNNLayerMaxPoolingBprop2nd_task<<<this.in_size>>>(
+    this.prev().activationFunction(),
+    out2in_max,
+    in2out,
+    this.prev().output(0),
+    current_delta2,
+    prev_delta2);
+
+  return this.prev().bprop2nd(this.prev_delta2);
+}
+/*                                            Max-pooling Layer                                   */
 /**************************************************************************************************/
 
                                           /***********************/
@@ -401,7 +575,7 @@ private MkCNNLayers.construct!(io MkCNNLayers rhs) {
 }
 
 public MkCNNLayers() {
-  this.first = MkCNNInputLayer();
+  this.first = MkCNNLayerInput();
   this.add(this.first);
 }
 
