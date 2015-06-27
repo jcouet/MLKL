@@ -10,36 +10,42 @@
 
 require MLKL; 
 
+/**
+  The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
+  It provides access to the higher level reader objects such as the AlembicXformReader.
+  \example
+
+  require MLKL;
+
+  operator entry() {
+    
+  }
+
+  \endexample
+*/
  
+
 /**************************************************************************************************/
 /*                                         Partial-connected Layer                                */
+/// Class for partially-connected layer 
 object MkCNNLayerPartial : MkCNNLayerBase {
+  /// \internal
   protected MkCNNConnection weight2io[]; // weight_id . [(in_id, out_id)]
+  /// \internal
   protected MkCNNConnection out2wi[];    // out_id . [(weight_id, in_id)]
+  /// \internal
   protected MkCNNConnection in2wo[];     // in_id . [(weight_id, out_id)]
+  /// \internal
   protected Index bias2out[][];
+  /// \internal
   protected Index out2bias[];
+  /// \internal
   protected Float64 scale_factor; 
 };
  
+/// \internal
+/// Initilisation, called by the contructeurs
 protected MkCNNLayerPartial.init!(
-  Index activation,
-  Index in_size, 
-  Index out_size, 
-  Index weight_size, 
-  Index bias_size,
-  Float64 scale_factor) 
-{
-  this.init(activation, in_size, out_size, weight_size, bias_size);
-  this.in2wo.resize(in_size);
-  this.out2wi.resize(out_size);
-  this.out2bias.resize(out_size);
-  this.weight2io.resize(weight_size);
-  this.bias2out.resize(bias_size);
-  this.scale_factor = scale_factor;
-}
-
-public MkCNNLayerPartial(
   Index activation,
   Index in_size, 
   Index out_size, 
@@ -52,9 +58,29 @@ public MkCNNLayerPartial(
     report("Error MkCNNLayerPartial : invalid layer size");
     return;
   }
+
+  this.init(activation, in_size, out_size, weight_size, bias_size);
+  this.in2wo.resize(in_size);
+  this.out2wi.resize(out_size);
+  this.out2bias.resize(out_size);
+  this.weight2io.resize(weight_size);
+  this.bias2out.resize(bias_size);
+  this.scale_factor = scale_factor;
+}
+
+/// Constructor
+public MkCNNLayerPartial(
+  Index activation,
+  Index in_size, 
+  Index out_size, 
+  Index weight_size, 
+  Index bias_size,
+  Float64 scale_factor) 
+{
   this.init(activation, in_size, out_size, weight_size, bias_size, scale_factor);
 }
 
+/// Display the class attributs
 public MkCNNLayerPartial.display() {
   this.parent.display();
   report("\nMkCNNLayerPartial Attributs");
@@ -66,10 +92,12 @@ public MkCNNLayerPartial.display() {
   report("out2biasSize "  + this.out2bias.size());
 }
 
+/// Return the scale factor
 public Float64 MkCNNLayerPartial.scaleFactor() {
   return this.scale_factor;
 }
 
+/// Return the total number of no-null connections
 public Index MkCNNLayerPartial.paramSize() {
   Index total_param = 0;
   for (Index i=0; i<this.weight2io.size(); ++i)
@@ -83,6 +111,7 @@ public Index MkCNNLayerPartial.paramSize() {
   return total_param;
 }
 
+/// Return the total number of parameters connections
 public Index MkCNNLayerPartial.connectionSize() {
   Index total_size = 0;
   for (Index i=0; i<this.weight2io.size(); ++i) 
@@ -94,30 +123,39 @@ public Index MkCNNLayerPartial.connectionSize() {
   return total_size;
 }
 
+/// Return
 public Index MkCNNLayerPartial.fanInSize() {
   return this.out2wi[0].size();
 }
 
+/// \internal
+/// Return
 protected MkCNNConnection[] MkCNNLayerPartial.weight2io() {
   return this.weight2io;
 }
 
+/// \internal
 protected MkCNNConnection[] MkCNNLayerPartial.out2wi() {
   return this.out2wi;
 }
 
+/// \internal
 protected MkCNNConnection[] MkCNNLayerPartial.in2wo() {
   return this.in2wo;
 }
 
+/// \internal
 protected Index[][] MkCNNLayerPartial.bias2out() {
   return this.bias2out;
 }
 
+/// \internal
 protected Index[] MkCNNLayerPartial.out2bias() {
   return this.out2bias;
 }
 
+/// \internal
+/// 
 protected MkCNNLayerPartial.connectWeight!(
   Index input_index, 
   Index output_index, 
@@ -128,12 +166,14 @@ protected MkCNNLayerPartial.connectWeight!(
   this.in2wo[input_index].push(MkCNNIndexPair(weight_index, output_index));
 }
 
+/// \internal
 protected MkCNNLayerPartial.connectBias!(Index bias_index, Index output_index) {
   this.out2bias[output_index] = bias_index;
   this.bias2out[bias_index].push(output_index);
 }
 
-// Remove unused weight to improve cache hits
+/// \internal
+/// Remove unused weight to improve cache hits
 protected MkCNNLayerPartial.remap!() {
   
   SInt32 swaps[Index];
@@ -159,6 +199,8 @@ protected MkCNNLayerPartial.remap!() {
   this.weight2io = weight2io_new.clone();
 }
 
+/// \internal
+/// Parallalized task for Forward propagation
 operator MkCNNLayerPartialFprop_task<<<i>>>(
   Float64 scale_factor,
   Ref<MkCNNActivationFunctionInterface> h,
@@ -171,13 +213,13 @@ operator MkCNNLayerPartialFprop_task<<<i>>>(
 {
   Float64 a = 0.0;
   MkCNNIndexPair pairs[] = out2wi[i].pairs;
-  for (Index c=0; c<pairs.size(); ++c)  
-    a += w[pairs[c].first] * ins[pairs[c].second];  
-  a *= scale_factor;
-  a += b[out2bias[i]];
+  for (Index j=0; j<pairs.size(); ++j)  
+    a += w[pairs[j].first] * ins[pairs[j].second];  
+  a = a*scale_factor + b[out2bias[i]];
   output[i] = h.f(a);  
 }
 
+/// Forward propagation
 public Float64[] MkCNNLayerPartial.fprop!(Float64 ins[], Index index) {
   
   Float64 outputs[] = this.output[index];
@@ -195,6 +237,8 @@ public Float64[] MkCNNLayerPartial.fprop!(Float64 ins[], Index index) {
   return (this.next() != null) ? this.next().fprop(this.output[index], index) : this.output[index]; 
 }
 
+/// \internal
+/// Parallalized task for Backward propagation
 operator MkCNNLayerPartialBprop_task_1<<<i>>>(
   Float64 scale_factor,
   Ref<MkCNNActivationFunctionInterface> prev_h,
@@ -211,6 +255,8 @@ operator MkCNNLayerPartialBprop_task_1<<<i>>>(
   prev_delta[i] = delta * scale_factor * prev_h.df(prev_out[i]);  
 }
 
+/// \internal
+/// Parallalized task for Backward propagation
 operator MkCNNLayerPartialBprop_task_2<<<i>>>(
   Float64 scale_factor,
   MkCNNConnection weight2io[],
@@ -225,6 +271,7 @@ operator MkCNNLayerPartialBprop_task_2<<<i>>>(
   dw[i] += diff * scale_factor;
 }
 
+/// Backward propagation 
 public Float64[] MkCNNLayerPartial.bprop!(Float64 current_delta[], Index index) {
 
   Float64 prev_delta[] = this.prev_delta[index];
@@ -257,6 +304,8 @@ public Float64[] MkCNNLayerPartial.bprop!(Float64 current_delta[], Index index) 
   return this.prev().bprop(this.prev_delta[index], index);
 }
 
+/// \internal
+/// Parallalized task for 2nd Backward propagation
 operator MkCNNLayerPartialBprop2nd_task_1<<<i>>>(
   Float64 scale_factor,
   MkCNNConnection weight2io[],
@@ -272,6 +321,8 @@ operator MkCNNLayerPartialBprop2nd_task_1<<<i>>>(
   w_hessian[i] += diff;
 }
 
+/// \internal
+/// Parallalized task for 2nd Backward propagation
 operator MkCNNLayerPartialBprop2nd_task_2<<<i>>>(
   Float64 scale_factor,
   Ref<MkCNNActivationFunctionInterface> prev_h,
@@ -288,6 +339,7 @@ operator MkCNNLayerPartialBprop2nd_task_2<<<i>>>(
   prev_delta2[i] *= scale_factor * scale_factor * prev_h.df(prev_out[i]) * prev_h.df(prev_out[i]);
 }
  
+/// 2nd Backward propagation 
 public Float64[] MkCNNLayerPartial.bprop2nd!(Float64 current_delta2[]) {
    
   Float64 w_hessian[] = this.w_hessian;
@@ -326,11 +378,16 @@ public Float64[] MkCNNLayerPartial.bprop2nd!(Float64 current_delta2[]) {
 
 /**************************************************************************************************/
 /*                                          Average-pooling Layer                                 */
+/// Class for average-pooling layer 
 object MkCNNLayerAveragePooling : MkCNNLayerPartial {
+  /// \internal
   private MkCNNIndex3D ins;
+  /// \internal
   private MkCNNIndex3D outs;
 };
 
+/// \internal
+/// Connect the kernels
 private MkCNNLayerAveragePooling.connectKernel!(
   Index pooling_size, 
   Index i, 
@@ -345,6 +402,8 @@ private MkCNNLayerAveragePooling.connectKernel!(
         c);
 }
 
+/// \internal
+/// Set the kernel connections
 private MkCNNLayerAveragePooling.initConnection!(Index pooling_size) {
 
   for (Index c = 0; c < this.ins.depth; c++) 
@@ -358,6 +417,7 @@ private MkCNNLayerAveragePooling.initConnection!(Index pooling_size) {
         this.connectBias(c, this.outs.index(i, j, c));
 }
 
+/// Constructor
 public MkCNNLayerAveragePooling(
   Index activation,
   Index in_width,
@@ -384,6 +444,7 @@ public MkCNNLayerAveragePooling(
   this.initConnection(pooling_size);
 }
 
+/// Display the class attributs
 public MkCNNLayerAveragePooling.display() {
   this.parent.display();
   report("\nMkCNNLayerAveragePooling Attributs");
@@ -397,6 +458,7 @@ public MkCNNLayerAveragePooling.display() {
 
 /**************************************************************************************************/
 /*                                           Convolutional Layer                                  */
+/// Class for convolutional layer 
 object MkCNNLayerConvolutional : MkCNNLayerPartial {
   private MkCNNIndex3D ins;
   private MkCNNIndex3D outs;
@@ -405,6 +467,8 @@ object MkCNNLayerConvolutional : MkCNNLayerPartial {
   private Index window_size;
 };
 
+/// \internal
+/// Connect the kernels
 private MkCNNLayerConvolutional.connectKernel!(
   Index i, 
   Index j,
@@ -421,6 +485,8 @@ private MkCNNLayerConvolutional.connectKernel!(
   }
 }
 
+/// \internal
+/// Set the kernel connections
 private MkCNNLayerConvolutional.initConnection!(MkCNNConnectionTable connection) {
 
   for (Index in_c=0; in_c<this.ins.depth; in_c++) 
@@ -442,6 +508,7 @@ private MkCNNLayerConvolutional.initConnection!(MkCNNConnectionTable connection)
         this.connectBias(out_c, this.outs.index(i, j, out_c));
 }
 
+/// Constructor
 public MkCNNLayerConvolutional(
   Index activation,
   Index in_width, 
@@ -466,6 +533,7 @@ public MkCNNLayerConvolutional(
   this.initConnection(connection);
 }
 
+/// Constructor
 public MkCNNLayerConvolutional(
   Index activation,
   Index in_width, 
@@ -490,6 +558,7 @@ public MkCNNLayerConvolutional(
   this.remap();
 }
 
+/// Display the class attributs
 public MkCNNLayerConvolutional.display() {
   this.parent.display();
   report("\nMkCNNLayerConvolutional Attributs");
@@ -499,7 +568,7 @@ public MkCNNLayerConvolutional.display() {
   report("window_size " + this.window_size);
 }
 
-// TO-DO
+/// TO-DO
 public MkCNNLayerConvolutional.weightToImage() {
 
   //MkImage image();

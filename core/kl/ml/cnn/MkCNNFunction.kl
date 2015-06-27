@@ -17,34 +17,51 @@ require MLKL;
 const Index MK_LOSS_FUNC_MSE = 0;
 const Index MK_LOSS_FUNC_CE = 1;
  
-// Base object for loss function 
+/// Interface for loss function 
 interface MkCNNLossFunctionInterface {
-  Index mode();
   Float32 f(Float32 y, Float32 t);
   Float32 df(Float32 y, Float32 t);
+  Index mode();
+  String modeAsStr();
 };
 
+/// Base class for loss function 
 object MkCNNLossFunctionBase : MkCNNLossFunctionInterface {
   protected Index mode; // Mode, use to id the class
 };
 
-// Return the current mode, either MK_LOSS_FUNC_CE or MK_LOSS_FUNC_MSE
+/// Return the current mode, either MK_LOSS_FUNC_CE or MK_LOSS_FUNC_MSE
 public Index MkCNNLossFunctionBase.mode() {
   return this.mode;
 }
 
-// Return the value of the function at point x
+/// Return the current mode as string
+public String MkCNNLossFunctionBase.modeAsStr() {
+  switch(this.mode)
+  {
+    case 0 :
+      return "MK_LOSS_FUNC_MSE";
+    break;
+
+    case 1 :
+      return "MK_LOSS_FUNC_CE";
+    break;
+  }
+  return "MK_LOSS_FUNC_UNKNOWN";
+}
+
+/// Return the value of the function at point x
 public Float32 MkCNNLossFunctionBase.f(Float32 y, Float32 t) {
   return 0.0;
 }
 
-// Return the value of the function derivate point x
+/// Return the value of the function derivate point x
 public Float32 MkCNNLossFunctionBase.df(Float32 y, Float32 t) {
   return 0.0;
 }
 
 
-// Mean Square error 
+/// Mean Square error 
 object MkCNNLossFunctionMSE : MkCNNLossFunctionBase {};
 
 function MkCNNLossFunctionMSE() {
@@ -60,7 +77,7 @@ public Float32 MkCNNLossFunctionMSE.df(Float32 y, Float32 t) {
 }
 
  
-// Cross-Entropy 
+/// Cross-Entropy 
 object MkCNNLossFunctionCE : MkCNNLossFunctionBase {};
 
 function MkCNNLossFunctionCE() {
@@ -86,40 +103,65 @@ const Index MK_ACTIVATION_FUNC_SIGMOID = 1;
 const Index MK_ACTIVATION_FUNC_RECTIFIEDLINEAR = 2;
 const Index MK_ACTIVATION_FUNC_TANH = 3;
  
-// Base object for activation function 
+/// Interface for activation function 
 interface MkCNNActivationFunctionInterface {
   Float64 f(Float64 x);
   Float64 df(Float64 x);
   Vec2 scale();
   Index mode();
+  String modeAsStr();
 };
 
+/// Base class for activation function 
 object MkCNNActivationFunctionBase : MkCNNActivationFunctionInterface {
   protected Index mode; // Mode
 };
 
-// Return the current mode
+/// Return the current mode
 public Index MkCNNActivationFunctionBase.mode() {
   return this.mode;
 }
 
-// Return the value of the function at point x
+/// Return the current mode as string
+public String MkCNNActivationFunctionBase.modeAsStr() {
+  switch(this.mode)
+  {
+    case 0 :
+      return MK_ACTIVATION_FUNC_IDENTITY;
+    break;
+
+    case 1 :
+      return MK_ACTIVATION_FUNC_SIGMOID;
+    break;
+
+    case 2 :
+      return MK_ACTIVATION_FUNC_RECTIFIEDLINEAR;
+    break;
+
+    case 3 :
+      return MK_ACTIVATION_FUNC_TANH;
+    break;
+  }
+  return "MK_ACTIVATION_UNKNOWN";
+}
+
+/// Return the value of the function at point x
 public Float64 MkCNNActivationFunctionBase.f(Float64 x) {
   return 0.0;
 }
 
-// Return the value of the function derivate point x
+/// Return the value of the function derivate point x
 public Float64 MkCNNActivationFunctionBase.df(Float64 x) {
   return 0.0;
 }
 
-// Return the current scale
+/// Return the current scale
 public Vec2 MkCNNActivationFunctionBase.scale() {
   return Vec2(1.0, 1.0);
 }
 
 
-// Identity 
+/// Identity 
 object MkCNNActivationFunctionIdentity : MkCNNActivationFunctionBase {};
 
 function MkCNNActivationFunctionIdentity() {
@@ -139,7 +181,7 @@ public Vec2 MkCNNActivationFunctionIdentity.scale() {
 }
 
 
-// Sigmoid
+/// Sigmoid
 object MkCNNActivationFunctionSigmoid : MkCNNActivationFunctionBase {};
 
 function MkCNNActivationFunctionSigmoid() {
@@ -159,7 +201,7 @@ public Vec2 MkCNNActivationFunctionSigmoid.scale() {
 }
 
 
-// Linear
+/// Linear
 object MkCNNActivationFunctionRectifiedLinear : MkCNNActivationFunctionBase {};
 
 function MkCNNActivationFunctionRectifiedLinear() {
@@ -179,7 +221,7 @@ public Vec2 MkCNNActivationFunctionRectifiedLinear.scale() {
 }
 
 
-// Tangeante hyperbolic
+/// Tangeante hyperbolic
 object MkCNNActivationFunctionTanH : MkCNNActivationFunctionBase {};
 
 function MkCNNActivationFunctionTanH() {

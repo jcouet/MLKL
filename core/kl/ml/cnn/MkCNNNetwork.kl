@@ -10,12 +10,27 @@
 
 require MLKL; 
 
+/**
+  The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
+  It provides access to the higher level reader objects such as the AlembicXformReader.
+  \example
+
+  require MLKL;
+
+  operator entry() {
+    
+  }
+
+  \endexample
+*/
+ 
 
 const Index MK_GRAD_CHECK_ALL = 0;
 const Index MK_GRAD_CHECK_FIRST = 1;
 const Index MK_GRAD_CHECK_RANDOM = 2;
 
 
+/// Class for Convolution Neural-Network 
 object MkCNNNetwork {
   private String name;
   private MkCCNConfig config;
@@ -24,6 +39,8 @@ object MkCNNNetwork {
   private MkCNNLayers layers;
 };
 
+/// \internal
+/// Initilisation, called by the contructeurs
 private MkCNNNetwork.init!(
   Index loss_function,
   Index optimizer,
@@ -63,6 +80,7 @@ private MkCNNNetwork.init!(
   }
 }
 
+/// Constructor
 public MkCNNNetwork(
   Index loss_function,
   Index optimizer,
@@ -71,6 +89,7 @@ public MkCNNNetwork(
   this.init(loss_function, optimizer, name);
 }
 
+/// Constructor
 public MkCNNNetwork(
   Index loss_function,
   Index optimizer) 
@@ -78,6 +97,7 @@ public MkCNNNetwork(
   this.init(loss_function, optimizer, "");
 }
 
+/// Constructor
 public MkCNNNetwork(
   Index loss_function,
   Index optimizer,
@@ -88,6 +108,7 @@ public MkCNNNetwork(
   this.add(layers);
 }
 
+/// Constructor
 public MkCNNNetwork(
   Index loss_function,
   Index optimizer,
@@ -97,15 +118,7 @@ public MkCNNNetwork(
   this.add(layers);
 }
 
-public MkCNNNetwork.add!(io MkCNNLayerInterface layer) {
-  this.layers.add(layer);
-}
-
-public MkCNNNetwork.add!(io MkCNNLayerInterface layers[]) {
-  for(Index i=0; i<layers.size(); ++i)
-    this.layers.add(layers[i]);
-}
-
+/// Display the netwok attributs
 public MkCNNNetwork.display() {
   report("\nMkCNNNetwork Attributs ");
   report("config "        + this.config);
@@ -115,25 +128,38 @@ public MkCNNNetwork.display() {
   this.layers.display();
 }
 
-// input data dimension of whole networks
+/// Return the input dimension of whole networks
 public Index MkCNNNetwork.inDim() { 
   return this.layers.head().inSize(); 
 }
 
-// output data dimension of whole networks
+/// Return the output dimension of whole networks
 public Index MkCNNNetwork.outDim() { 
   return this.layers.tail().outSize(); 
 }
 
+/// Return the netork name
 public String MkCNNNetwork.name() { 
   return this.name;
 }
 
+/// Return a pointer to the netork optimizer
 public Ref<MkCNNOptimizerInterface> MkCNNNetwork.optimizer() {
   return this.optimizer;
 }
 
-// training conv-net
+/// Add a new layer to the network
+public MkCNNNetwork.add!(io MkCNNLayerInterface layer) {
+  this.layers.add(layer);
+}
+
+/// Add a stack pf new layers to the network
+public MkCNNNetwork.add!(io MkCNNLayerInterface layers[]) {
+  for(Index i=0; i<layers.size(); ++i)
+    this.layers.add(layers[i]);
+}
+
+/// Train the network
 public MkCNNNetwork.train!(
   Float64 ins[][], 
   Index t[], 
@@ -160,13 +186,16 @@ public MkCNNNetwork.train!(
       //on_batch_enumerate.update();
     }
     on_epoch_enumerate.update(this, test_ins, test_t);
+    this.save("C:\\Users\\Julien\\Documents\\Dev\\MLKL\\data\\test.txt");
   }
 }
 
+/// Predict the network, use while training
 public Float64[] MkCNNNetwork.predict!(Float64 ins[]) {
   return this.fprop(ins, 0);
 }
 
+/// Test the network, use after training 
 public MkCNNNetworkResult MkCNNNetwork.test!(Float64 ins[][], Index t[]) {
   
   MkCNNNetworkResult test_result;
@@ -182,6 +211,25 @@ public MkCNNNetworkResult MkCNNNetwork.test!(Float64 ins[][], Index t[]) {
     //test_result.confusion_matrix[predicted][actual]+=1.0;
   }
   return test_result;
+}
+
+/// Save the network
+public Boolean MkCNNNetwork.save(String path) {
+
+  // Check if the file exist and delete it
+
+  // Create a new file
+
+  // Save the layers weights
+  TextWriter writer(path);
+  //this.layers.save(writer);
+  //this.layers.save(writer);
+  return this.layers.save(writer);
+}
+
+/// Load the netork
+public Boolean MkCNNNetwork.load!(String path) {
+  return this.layers.load(path);
 }
 
 /*
@@ -300,18 +348,24 @@ public MkCNNNetworkResult MkCNNNetwork.test!(Float64 ins[][], Index t[]) {
   }
 */
 
+/// \internal
+/// Reset the network layers weigths
 private MkCNNNetwork.initWeight!() {
   this.layers.reset();
 }
 
+/// \internal
 private Float64 MkCNNNetwork.targetValueMin() { 
   return Float64(this.layers.tail().activationFunction().scale().x); 
 }
 
+/// \internal
 private Float64 MkCNNNetwork.targetValueMax() { 
   return Float64(this.layers.tail().activationFunction().scale().y); 
 }
 
+/// \internal
+/// Convert 1D label array to 2D (image) array
 private MkCNNNetwork.label2Vector(
   Index batch_index,
   Index size, 
@@ -335,17 +389,8 @@ private MkCNNNetwork.label2Vector(
   }
 }
 
-private MkCNNNetwork.trainOnce!(
-  Index batch_index,
-  Float64 ins[][], 
-  Index t[], 
-  Index size) 
-{
-  Float64 v[][];
-  this.label2Vector(batch_index, size, t, v);
-  this.trainOnce(batch_index, ins, v, size);
-}
-
+/// \internal
+/// Train one batch
 private MkCNNNetwork.trainOnce!(
   Index batch_index,
   Float64 ins[][], 
@@ -380,8 +425,22 @@ private MkCNNNetwork.trainOnce!(
 
     this.layers.updateWeights(opti, num_tasks, size);
   }
-}   
+}  
 
+/// \internal
+/// Overload, Train one batch with 1D label array
+private MkCNNNetwork.trainOnce!(
+  Index batch_index,
+  Float64 ins[][], 
+  Index t[], 
+  Index size) 
+{
+  Float64 v[][];
+  this.label2Vector(batch_index, size, t, v);
+  this.trainOnce(batch_index, ins, v, size);
+} 
+
+/// \internal
 private Boolean MkCNNNetwork.isCanonicalLink(
   Ref<MkCNNActivationFunctionInterface> h, 
   Ref<MkCNNLossFunctionInterface> e) 
@@ -398,6 +457,8 @@ private Boolean MkCNNNetwork.isCanonicalLink(
   return false;
 }
 
+/// \internal
+/// Computation of the hessian
 private MkCNNNetwork.calcHessian!(Float64 ins[][], Index size_init_hessian) {
 
   Index size = Math_min(ins.size(), size_init_hessian);
@@ -410,6 +471,7 @@ private MkCNNNetwork.calcHessian!(Float64 ins[][], Index size_init_hessian) {
   this.layers.divideHessian(size);
 }
 
+/// \internal
 private Float64 MkCNNNetwork.getLoss(Float64 outs[], Float64 t[]) {
   //assert(outs.size() == (Index)t.size());
   Float64 e = 0.0;
@@ -418,12 +480,16 @@ private Float64 MkCNNNetwork.getLoss(Float64 outs[], Float64 t[]) {
   return e;
 }
 
+/// \internal
+/// Forward propagation
 private Float64[] MkCNNNetwork.fprop!(Float64 ins[], Index idx) {
   if (ins.size() != this.inDim())
     return ins;
   return this.layers.head().fprop(ins, idx);
 }
 
+/// \internal
+/// Backward propagetion 
 private MkCNNNetwork.bprop!(
   Float64 outs[], 
   Float64 t[], 
@@ -446,6 +512,8 @@ private MkCNNNetwork.bprop!(
   this.layers.tail().bprop(delta, idx);
 }
 
+/// \internal
+/// 2nd Backward propagation, use for Hessian computation 
 private MkCNNNetwork.bprop2nd!(Float64 outs[]) {
   Float64 delta[]; delta.resize(this.outDim());
   
