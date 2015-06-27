@@ -72,6 +72,7 @@ interface MkCNNLayerInterface {
 
 /// Base class of all kind of NN layers
 object MkCNNLayerBase : MkCNNLayerInterface {
+  protected Index mode;
   protected MkCCNConfig config;
   protected Index in_size;                      // Layer input size
   protected Index out_size;                     // Layer output size
@@ -188,6 +189,7 @@ public Index MkCNNLayerBase.mode() {
 
 /// Display the class attributs
 public String MkCNNLayerBase.modeAsStr() {
+  
   switch(this.mode)
   {
     case 0 :
@@ -223,6 +225,7 @@ public String MkCNNLayerBase.modeAsStr() {
     break;
 
   }
+  
   return "MK_LAYER_UNKNOWN";
 }
 

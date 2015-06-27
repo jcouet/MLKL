@@ -8,6 +8,7 @@
 /*                                                                                                */
 /**************************************************************************************************/
 
+require FileIO;
 require MLKL; 
 
 /**
@@ -222,8 +223,6 @@ public Boolean MkCNNNetwork.save(String path) {
 
   // Save the layers weights
   TextWriter writer(path);
-  //this.layers.save(writer);
-  //this.layers.save(writer);
   return this.layers.save(writer);
 }
 
