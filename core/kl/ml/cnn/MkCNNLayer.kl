@@ -67,7 +67,7 @@ interface MkCNNLayerInterface {
   Float64[] bprop!(Float64 current_delta[], Index index);
   Float64[] bprop2nd!(Float64 current_delta2[]);
   Boolean save(io TextWriter writer);
-  Boolean load!(String path);
+  Boolean load!(io TextReader reader);
 };
 
 /// Base class of all kind of NN layers
@@ -128,7 +128,7 @@ protected MkCNNLayerBase.init!(
   Index weight_size, 
   Index bias_size) 
 {
-  this.mode = 0;
+  this.mode = MK_LAYER_BASE;
   this.output.resize(this.config.taskSize());
   this.prev_delta.resize(this.config.taskSize());
   this.dw.resize(this.config.taskSize());
@@ -190,43 +190,32 @@ public Index MkCNNLayerBase.mode() {
 /// Display the class attributs
 public String MkCNNLayerBase.modeAsStr() {
   
-  switch(this.mode)
-  {
-    case 0 :
-      return "MK_LAYER_BASE";
-    break;
+  if(this.mode == MK_LAYER_BASE)
+    return "MK_LAYER_BASE";
 
-    case 1 :
-      return "MK_LAYER_INPUT";
-    break;
+  else if(this.mode == MK_LAYER_INPUT)
+    return "MK_LAYER_INPUT";
 
-    case 2 :
-      return "MK_LAYER_PARTIAL";
-    break;
+  else if(this.mode == MK_LAYER_PARTIAL)
+    return "MK_LAYER_PARTIAL";
 
-    case 3 :
-      return "MK_LAYER_FULLY";
-    break;
+  else if(this.mode == MK_LAYER_FULLY)
+    return "MK_LAYER_FULLY";
 
-    case 4 :
-      return "MK_LAYER_MAX_POOLING";
-    break;
-
-    case 5 :
-      return "MK_LAYER_AVERAGE_POOLING";
-    break;
-
-    case 6 :
-      return "MK_LAYER_CONVOLUTIONAL";
-    break;
-
-    case 7 :
-      return "MK_LAYER_DROPOUT";
-    break;
-
-  }
-  
-  return "MK_LAYER_UNKNOWN";
+  else if(this.mode == MK_LAYER_MAX_POOLING)
+    return "MK_LAYER_MAX_POOLING";
+ 
+  else if(this.mode == MK_LAYER_AVERAGE_POOLING)
+    return "MK_LAYER_AVERAGE_POOLING";
+ 
+  else if(this.mode == MK_LAYER_CONVOLUTIONAL)
+    return "MK_LAYER_CONVOLUTIONAL";
+ 
+  else if(this.mode == MK_LAYER_DROPOUT)
+    return "MK_LAYER_DROPOUT";
+ 
+  else
+    return "MK_LAYER_UNKNOWN";
 }
 
 /// Return the number of layer inputs
@@ -423,17 +412,17 @@ public MkCNNLayerBase.divideHessian!(Index denominator) {
 
 /// Forward propagation
 public Float64[] MkCNNLayerBase.fprop!(Float64 ins[], Index index) {
-  Float64 temp[]; return temp;
+  return ins;
 }
 
 /// Backward propagetion 
 public Float64[] MkCNNLayerBase.bprop!(Float64 current_delta[], Index index) {
-  Float64 temp[]; return temp;
+  return current_delta;
 }
 
 /// 2nd Backward propagetion 
 public Float64[] MkCNNLayerBase.bprop2nd!(Float64 current_delta2[]) {
-  Float64 temp[]; return temp;
+  return current_delta2;
 }
 
 /// Save the layer weights
@@ -445,7 +434,7 @@ public Boolean MkCNNLayerBase.save(io TextWriter writer) {
 }
 
 /// load the layer weights
-public Boolean MkCNNLayerBase.load!(String path) {
+public Boolean MkCNNLayerBase.load!(io TextReader reader) {
 
   return true;
 }

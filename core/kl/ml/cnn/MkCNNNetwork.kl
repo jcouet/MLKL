@@ -41,7 +41,7 @@ object MkCNNNetwork {
 };
 
 /// \internal
-/// Initilisation, called by the contructeurs
+/// Initilisation, called by the contructeurs and derived classes
 private MkCNNNetwork.init!(
   Index loss_function,
   Index optimizer,
@@ -354,11 +354,13 @@ private MkCNNNetwork.initWeight!() {
 }
 
 /// \internal
+/// To Remove == set within the function where it's called
 private Float64 MkCNNNetwork.targetValueMin() { 
   return Float64(this.layers.tail().activationFunction().scale().x); 
 }
 
 /// \internal
+/// To Remove == set within the function where it's called
 private Float64 MkCNNNetwork.targetValueMax() { 
   return Float64(this.layers.tail().activationFunction().scale().y); 
 }
@@ -459,14 +461,9 @@ private Boolean MkCNNNetwork.isCanonicalLink(
 /// \internal
 /// Computation of the hessian
 private MkCNNNetwork.calcHessian!(Float64 ins[][], Index size_init_hessian) {
-
   Index size = Math_min(ins.size(), size_init_hessian);
-
   for(Index i=0; i<size; i++) 
-  {
-    Float64 outs[] = this.fprop(ins[i], 0);
-    this.bprop2nd(outs);
-  }
+    this.bprop2nd(this.fprop(ins[i], 0));
   this.layers.divideHessian(size);
 }
 
@@ -482,8 +479,7 @@ private Float64 MkCNNNetwork.getLoss(Float64 outs[], Float64 t[]) {
 /// \internal
 /// Forward propagation
 private Float64[] MkCNNNetwork.fprop!(Float64 ins[], Index idx) {
-  if (ins.size() != this.inDim())
-    return ins;
+  if (ins.size() != this.inDim()) return ins;
   return this.layers.head().fprop(ins, idx);
 }
 

@@ -10,13 +10,28 @@
 
 require MLKL; 
 
+/**
+  The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
+  It provides access to the higher level reader objects such as the AlembicXformReader.
+  \example
+
+  require MLKL;
+
+  operator entry() {
+    
+  }
+
+  \endexample
+*/
 
 /**************************************************************************************************/
 /*                                          Fully-connected Layer                                 */
+/// Class for fully-connected layer 
 object MkCNNLayerFully : MkCNNLayerBase {
   protected MkCNNFilterInterface filter;
 };
 
+/// Constructor
 function MkCNNLayerFully(
   Index activation,
   Index in_size, 
@@ -26,12 +41,14 @@ function MkCNNLayerFully(
   this.filter = MkCNNFilterNone();
 }
 
+/// Display the class attributs
 public MkCNNLayerFully.display() {
   this.parent.display();
   report("\nMkCNNLayerFully Attributs");
   report("Filter " + this.filter);
 }
 
+/// Return the total number of parameters connections
 public Index MkCNNLayerFully.connectionSize() {
   return this.in_size * this.out_size + this.out_size;
 }
@@ -40,6 +57,8 @@ public Index MkCNNLayerFully.fanInSize() {
   return this.in_size;
 }
 
+/// \internal
+/// Parallalized task for Forward propagation
 operator MkCNNLayerFullyFprop_task<<<i>>>(
   Ref<MkCNNActivationFunctionInterface> h,
   Index in_size,
@@ -56,6 +75,7 @@ operator MkCNNLayerFullyFprop_task<<<i>>>(
   output[i] = h.f(z);
 }
 
+/// Forward propagation
 public Float64[] MkCNNLayerFully.fprop!(Float64 ins[], Index index) {
  
   Float64 output[] = this.output[index];
@@ -73,6 +93,8 @@ public Float64[] MkCNNLayerFully.fprop!(Float64 ins[], Index index) {
   return (this.next() != null) ? this.next().fprop(outs, index) : outs;
 }
 
+/// \internal
+/// Parallalized task for Backward propagation
 operator MkCNNLayerFullyBprop_task_1<<<c>>>(
   Ref<MkCNNActivationFunctionInterface> prev_h,
   Index out_size,
@@ -87,6 +109,8 @@ operator MkCNNLayerFullyBprop_task_1<<<c>>>(
   prev_delta[c] *= prev_h.df(prev_out[c]);
 }
 
+/// \internal
+/// Parallalized task for Backward propagation
 operator MkCNNLayerFullyBprop_task_2<<<i>>>(
   Index in_size,
   Index out_size,
@@ -100,6 +124,7 @@ operator MkCNNLayerFullyBprop_task_2<<<i>>>(
   db[i] += current_delta[i];
 }
 
+/// Backward propagation 
 public Float64[] MkCNNLayerFully.bprop!(Float64 current_delta[], Index index) {
   
   Float64 prev_delta[] = this.prev_delta[index];
@@ -124,6 +149,8 @@ public Float64[] MkCNNLayerFully.bprop!(Float64 current_delta[], Index index) {
   return this.prev().bprop(this.prev_delta[index], index);
 }
 
+/// \internal
+/// Parallalized task for 2nd Backward propagation
 operator MkCNNLayerFullyBprop2nd_task<<<c>>>(
   Ref<MkCNNActivationFunctionInterface> prev_h,
   Index out_size,
@@ -142,6 +169,7 @@ operator MkCNNLayerFullyBprop2nd_task<<<c>>>(
   prev_delta2[c] *= prev_h.df(prev_out[c]) * prev_h.df(prev_out[c]);
 }
 
+/// 2nd Backward propagation 
 public Float64[] MkCNNLayerFully.bprop2nd!(Float64 current_delta2[]) {
  
   for (Index r=0; r<this.out_size; r++)
@@ -167,8 +195,10 @@ public Float64[] MkCNNLayerFully.bprop2nd!(Float64 current_delta2[]) {
 
 /**************************************************************************************************/
 /*                                             Drop-out Layer                                     */
+/// Class for average-pooling layer 
 object MkCNNLayerDropout : MkCNNLayerFully {};
 
+/// Constructor
 function MkCNNLayerDropout(
   Index activation,
   Index in_size, 
@@ -180,11 +210,12 @@ function MkCNNLayerDropout(
   this.filter = MkCNNDropout();
 }
 
+/// Set the dropout rate
 public MkCNNLayerDropout.dropoutRate!(Float64 rate) {
   this.filter.dropoutRate(rate);
 }
 
-// Set dropout-context (training-phase or test-phase)
+/// Set dropout-context (training-phase or test-phase)
 public MkCNNLayerDropout.context!(Index ctx) {
   this.filter.context(ctx);
 }

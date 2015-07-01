@@ -1,0 +1,349 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require FileIO, Util;
+require MLKL; 
+
+/**
+  The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
+  It provides access to the higher level reader objects such as the AlembicXformReader.
+  \example
+
+  require MLKL;
+
+  operator entry() {}
+
+  \endexample
+*/
+
+
+/**************************************************************************************************/
+/*                                          Activation functions                                  */
+/// Class for netork configuration 
+struct MkCNNLayerDefs {}; 
+
+/// \Internal
+/// Parse the layers configuration parameter relative to the activation function
+private Boolean MkCNNLayerDefs.parseActivationFunction(
+  String line, 
+  io Index activation_func)
+{
+  if(line == "id") { 
+    activation_func = MK_ACTIVATION_FUNC_IDENTITY; 
+    return true; 
+  }
+  else if(line == "sig") { 
+    activation_func = MK_ACTIVATION_FUNC_SIGMOID; 
+    return true; 
+  }
+  else if(line == "relu") {
+    activation_func = MK_ACTIVATION_FUNC_RECTIFIEDLINEAR; 
+    return true; 
+  }
+  else if(line == "tanh") { 
+    activation_func = MK_ACTIVATION_FUNC_TANH; 
+    return true; 
+  }
+  else return false;
+}
+
+/// \Internal
+/// Parse the layers configuration and create them
+/// TO-DO
+private Boolean MkCNNLayerDefs.parseData(
+  String layer_name,
+  io TextReader reader, 
+  io MkCNNLayerInterface layers[]) 
+{
+
+  return true;
+}
+
+/// \Internal
+/// Parse the layers configuration and create them
+private Boolean MkCNNLayerDefs.parseConvolutional(
+  String layer_name,
+  io TextReader reader, 
+  io MkCNNLayerInterface layers[]) 
+{
+  Index activation_func, in_size, window_size;
+  Index in_channels, out_channels, params_counter = 0;
+
+  String line = reader.readLine();
+  if(line.find("neuron=") > -1) {
+    String neuron_type = line.subString(line.find("neuron=") + String("neuron=").length(), line.length());
+    if(this.parseActivationFunction(neuron_type, activation_func)) 
+      params_counter ++;    
+    line = reader.readLine();
+  }
+  if(line.find("filters=") > -1) {
+    String filters_str = line.subString(line.find("filters=") + String("filters=").length(), line.length());
+    in_size = Index(filters_str.toInteger());
+    params_counter ++;  
+    line = reader.readLine();  
+  }
+  if(line.find("filterSize=") > -1) {
+    String window_size_str = line.subString(line.find("filterSize=") + String("filterSize=").length(), line.length());
+    window_size = Index(window_size_str.toInteger());
+    params_counter ++;  
+    line = reader.readLine();  
+  }
+  if(line.find("inChannels=") > -1) {
+    String in_channels_str = line.subString(line.find("inChannels=") + String("inChannels=").length(), line.length());
+    in_channels = Index(in_channels_str.toInteger());
+    params_counter ++;  
+    line = reader.readLine();  
+  }
+  if(line.find("outChannels=") > -1) {
+    String out_channels_str = line.subString(line.find("outChannels=") + String("outChannels=").length(), line.length());
+    out_channels= Index(out_channels_str.toInteger());
+    params_counter ++;  
+    line = reader.readLine();  
+  }
+
+  report("\nConvolutional");
+  if(params_counter != 5) {
+    report("Error, wrong parameter order");
+    return false;
+  }
+  else {
+    report("activation_func " + activation_func);
+    report("in_size "         + in_size);
+    report("window_size "     + window_size);
+    report("in_channels "     + in_channels);
+    report("out_channels "    + out_channels);
+
+    //MK_ACTIVATION_FUNC_TANH, 32, 32, 5, 1, 6));
+    layers.push(MkCNNLayerConvolutional(
+      activation_func,
+      in_size, in_size, window_size,  
+      in_channels, out_channels));
+
+    return true;
+  }
+}
+
+/// \Internal
+/// Parse the layers configuration and create them
+private Boolean MkCNNLayerDefs.parsePooling(
+  String layer_name,
+  io TextReader reader,
+  io MkCNNLayerInterface layers[]) 
+{
+  Index pool_type, activation_func, in_size;
+  Index in_channels, pooling_size, params_counter = 0;
+
+  String line = reader.readLine();
+  if(line.find("pool=") > -1) {
+    String pool_type_str = line.subString(line.find("pool=") + String("pool=").length(), line.length());
+    if(pool_type_str == "avg") {
+      pool_type = 0;
+      params_counter ++;    
+    }
+    else if(pool_type_str == "max") {
+      pool_type = 1;
+      params_counter ++;    
+    }
+    line = reader.readLine();
+  }
+  if(line.find("neuron=") > -1) {
+    String neuron_type = line.subString(line.find("neuron=") + String("neuron=").length(), line.length());
+    if(this.parseActivationFunction(neuron_type, activation_func)) 
+      params_counter ++;    
+    line = reader.readLine();
+  }
+  if(line.find("filters=") > -1) {
+    String filters_str = line.subString(line.find("filters=") + String("filters=").length(), line.length());
+    in_size = Index(filters_str.toInteger());
+    params_counter ++;  
+    line = reader.readLine();  
+  }
+  if(line.find("inChannels=") > -1) {
+    String in_channels_str = line.subString(line.find("inChannels=") + String("inChannels=").length(), line.length());
+    in_channels = Index(in_channels_str.toInteger());
+    params_counter ++;  
+    line = reader.readLine();  
+  }
+  if(line.find("poolingSize=") > -1) {
+    String pooling_size_str = line.subString(line.find("poolingSize=") + String("poolingSize=").length(), line.length());
+    pooling_size= Index(pooling_size_str.toInteger());
+    params_counter ++;  
+    line = reader.readLine();  
+  }
+
+  report("\nPooling");
+  if(params_counter != 5) {
+    report("Error, wrong parameter order");
+    return false;
+  }
+  else {
+    report("pool_type "       + pool_type);
+    report("activation_func " + activation_func);
+    report("in_size "         + in_size);
+    report("in_channels "     + in_channels);
+    report("pooling_size "    + pooling_size);
+
+    if(pool_type == 0)
+      layers.push(MkCNNLayerAveragePooling(
+        activation_func,in_size, in_size,  
+        in_channels, pooling_size));
+    else
+      layers.push(MkCNNLayerMaxPooling(
+        activation_func,in_size, in_size,  
+        in_channels, pooling_size));
+    return true;
+  }
+}
+
+/// \Internal
+/// Parse the layers configuration and create them
+private Boolean MkCNNLayerDefs.parseFully(
+  String layer_name,
+  io TextReader reader, 
+  io MkCNNLayerInterface layers[]) 
+{
+  Index activation_func, in_channels, out_channels, params_counter = 0;
+
+  String line = reader.readLine();
+  if(line.find("neuron=") > -1) {
+    String neuron_type = line.subString(line.find("neuron=") + String("neuron=").length(), line.length());
+    if(this.parseActivationFunction(neuron_type, activation_func)) 
+      params_counter ++;    
+    line = reader.readLine();
+  }
+  if(line.find("inChannels=") > -1) {
+    String in_channels_str = line.subString(line.find("inChannels=") + String("inChannels=").length(), line.length());
+    in_channels = Index(in_channels_str.toInteger());
+    params_counter ++;  
+    line = reader.readLine();  
+  }
+  if(line.find("outChannels=") > -1) {
+    String out_channels_str = line.subString(line.find("outChannels=") + String("poolingSize=").length(), line.length());
+    out_channels = Index(out_channels_str.toInteger());
+    params_counter ++;  
+    line = reader.readLine();  
+  }
+
+  report("\nFully");
+  if(params_counter != 3) {
+    report("Error, wrong parameter order");
+    return false;
+  }
+  else {
+    report("activation_func " + activation_func);
+    report("in_channels "     + in_channels);
+    report("out_channels "    + out_channels);
+    layers.push(MkCNNLayerFully(activation_func, in_channels, out_channels));
+    return true;
+  }
+}
+
+/// \Internal
+/// Parse the layers configuration and create them
+public Boolean MkCNNLayerDefs.parse(String path_def, io MkCNNLayerInterface layers[]) {
+
+  TextReader reader();
+  if(!reader.open(path_def))
+    return false;
+
+  while(!reader.eof()) 
+  {
+    String line = reader.readLine();
+ 
+    // Pass comment
+    if(line[0] == "#") 
+      line = reader.readLine();
+
+    // If we hit a new layer
+    if(line[0] == "[")
+    {
+      String layer_name = line;
+      String layer_type = reader.readLine();
+
+      if(layer_type == "type=data") 
+      {
+        if(!this.parseData(layer_name, reader, layers)) 
+          return false;
+      }
+      else if(layer_type == "type=conv") 
+      {
+        if(!this.parseConvolutional(layer_name, reader, layers)) 
+          return false;
+      }
+      else if(layer_type == "type=pool") 
+      {
+        if(!this.parsePooling(layer_name, reader, layers)) 
+          return false;
+      }
+      else if(layer_type == "type=fc") 
+      {
+        if(!this.parseFully(layer_name, reader, layers)) 
+          return false;
+      }
+    }
+  }
+
+  return reader.close();
+}
+/*                                              Loss functions                                    */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                          Activation functions                                  */
+/// Class for netork configuration 
+struct MkCNNLayerParams {}; 
+
+/// \Internal
+/// Parse the layers initial parameters
+public Boolean MkCNNLayerParams.parse(String path_params, io MkCNNLayerInterface layers[]) {
+  TextReader reader(path_params);
+  
+  return true;
+}
+/*                                              Loss functions                                    */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                          Activation functions                                  */
+/// Class for netork configuration 
+struct MkCNNLayerConfig {}; 
+
+/// \Internal
+/// Check if the layers input / output size of correct
+private Boolean MkCNNLayerConfig.check(io MkCNNLayerInterface layers[]) {
+  return true;
+}
+
+/// Create and configure the network
+public Boolean MkCNNLayerConfig.config(
+  String path_def,
+  String path_params,
+  io MkCNNLayerInterface layers[])
+{
+  MkCNNLayerDefs layer_defs;
+  MkCNNLayerParams layer_params;
+
+  if(!layer_defs.parse(path_def, layers)) return false;
+  if(!layer_params.parse(path_params, layers)) return false;
+  if(!this.check(layers)) return false;
+  return true;
+}
+
+/// Return the number of layer connections
+public MkCNNLayerConfig.load() {
+
+}
+/*                                              Loss functions                                    */
+/**************************************************************************************************/
+ 

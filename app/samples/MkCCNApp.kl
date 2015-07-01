@@ -67,7 +67,15 @@ function LoadMNIST(
 
 operator entry() {
   
-  MkCNNLayerInterface layers[] = CreateLayers();
+  MkCNNLayerInterface layers[];
+
+  MkCNNLayerConfig layer_config;
+  layer_config.config(
+    "C:\\Users\\Julien\\Documents\\Dev\\MLKL\\app\\samples\\cnn\\layers_def.mlkl",
+    "C:\\Users\\Julien\\Documents\\Dev\\MLKL\\app\\samples\\cnn\\layers_params.mlkl",
+    layers);
+
+  //layers = CreateLayers();
   MkCNNNetwork nn(MK_LOSS_FUNC_MSE, MK_OPTIMIZER_GDLM, layers);
  
   Float64 train_images[][], test_images[][];

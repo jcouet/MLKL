@@ -11,6 +11,20 @@
 require Math;
 require MLKL; 
 
+/**
+  The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
+  It provides access to the higher level reader objects such as the AlembicXformReader.
+  \example
+
+  require MLKL;
+
+  operator entry() {
+    
+  }
+
+  \endexample
+*/
+
 
 /**************************************************************************************************/
 /*                                              Loss functions                                    */
@@ -37,25 +51,22 @@ public Index MkCNNLossFunctionBase.mode() {
 
 /// Return the current mode as string
 public String MkCNNLossFunctionBase.modeAsStr() {
-  switch(this.mode)
-  {
-    case 0 :
-      return "MK_LOSS_FUNC_MSE";
-    break;
-
-    case 1 :
-      return "MK_LOSS_FUNC_CE";
-    break;
-  }
-  return "MK_LOSS_FUNC_UNKNOWN";
+  if(this.mode == MK_LOSS_FUNC_MSE)
+    return "MK_LOSS_FUNC_MSE";
+  else if(this.mode == MK_LOSS_FUNC_CE)
+    return "MK_LOSS_FUNC_CE";
+  else
+    return "MK_LOSS_FUNC_UNKNOWN";
 }
 
 /// Return the value of the function at point x
+/// To be overload
 public Float32 MkCNNLossFunctionBase.f(Float32 y, Float32 t) {
   return 0.0;
 }
 
 /// Return the value of the function derivate point x
+/// To be overload
 public Float32 MkCNNLossFunctionBase.df(Float32 y, Float32 t) {
   return 0.0;
 }
@@ -124,38 +135,37 @@ public Index MkCNNActivationFunctionBase.mode() {
 
 /// Return the current mode as string
 public String MkCNNActivationFunctionBase.modeAsStr() {
-  switch(this.mode)
-  {
-    case 0 :
-      return MK_ACTIVATION_FUNC_IDENTITY;
-    break;
 
-    case 1 :
-      return MK_ACTIVATION_FUNC_SIGMOID;
-    break;
+  if(this.mode == MK_ACTIVATION_FUNC_IDENTITY)
+    return "MK_ACTIVATION_FUNC_IDENTITY";
+    
+  else if(this.mode == MK_ACTIVATION_FUNC_SIGMOID)
+    return "MK_ACTIVATION_FUNC_SIGMOID";
 
-    case 2 :
-      return MK_ACTIVATION_FUNC_RECTIFIEDLINEAR;
-    break;
+  else if(this.mode == MK_ACTIVATION_FUNC_RECTIFIEDLINEAR)
+    return "MK_ACTIVATION_FUNC_RECTIFIEDLINEAR";
 
-    case 3 :
-      return MK_ACTIVATION_FUNC_TANH;
-    break;
-  }
-  return "MK_ACTIVATION_UNKNOWN";
+  else if(this.mode == MK_ACTIVATION_FUNC_TANH)
+    return "MK_ACTIVATION_FUNC_TANH";
+
+  else
+    return "MK_ACTIVATION_UNKNOWN";
 }
 
 /// Return the value of the function at point x
+/// To be overload
 public Float64 MkCNNActivationFunctionBase.f(Float64 x) {
   return 0.0;
 }
 
 /// Return the value of the function derivate point x
+/// To be overload
 public Float64 MkCNNActivationFunctionBase.df(Float64 x) {
   return 0.0;
 }
 
 /// Return the current scale
+/// To be overload
 public Vec2 MkCNNActivationFunctionBase.scale() {
   return Vec2(1.0, 1.0);
 }

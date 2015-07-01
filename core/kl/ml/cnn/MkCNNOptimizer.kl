@@ -40,8 +40,7 @@ public MkCNNOptimizerBase.display() {
 public MkCNNOptimizerBase.update!(
   Float64 dw[], 
   Float64 H[], 
-  io Float64 w[]) 
-{}
+  io Float64 w[]) {}
 
 public Boolean MkCNNOptimizerBase.requiresHessian() {
   return false;
