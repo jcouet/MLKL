@@ -58,8 +58,9 @@ protected MkCNNLayerPartial.init!(
     report("Error MkCNNLayerPartial : invalid layer size");
     return;
   }
-
   this.init(activation, in_size, out_size, weight_size, bias_size);
+  
+  this.mode = MK_LAYER_PARTIAL;
   this.in2wo.resize(in_size);
   this.out2wi.resize(out_size);
   this.out2bias.resize(out_size);
@@ -92,11 +93,6 @@ public MkCNNLayerPartial.display() {
   report("out2biasSize "  + this.out2bias.size());
 }
 
-/// Return the scale factor
-public Float64 MkCNNLayerPartial.scaleFactor() {
-  return this.scale_factor;
-}
-
 /// Return the total number of no-null connections
 public Index MkCNNLayerPartial.paramSize() {
   Index total_param = 0;
@@ -126,32 +122,6 @@ public Index MkCNNLayerPartial.connectionSize() {
 /// Return
 public Index MkCNNLayerPartial.fanInSize() {
   return this.out2wi[0].size();
-}
-
-/// \internal
-/// Return
-protected MkCNNConnection[] MkCNNLayerPartial.weight2io() {
-  return this.weight2io;
-}
-
-/// \internal
-protected MkCNNConnection[] MkCNNLayerPartial.out2wi() {
-  return this.out2wi;
-}
-
-/// \internal
-protected MkCNNConnection[] MkCNNLayerPartial.in2wo() {
-  return this.in2wo;
-}
-
-/// \internal
-protected Index[][] MkCNNLayerPartial.bias2out() {
-  return this.bias2out;
-}
-
-/// \internal
-protected Index[] MkCNNLayerPartial.out2bias() {
-  return this.out2bias;
 }
 
 /// \internal
@@ -190,8 +160,7 @@ protected MkCNNLayerPartial.remap!() {
     for (Index j=0; j<this.in2wo[i].size(); j++)
       this.in2wo[i].first(j, Index(swaps[this.in2wo[i].first(j)]));
 
-  MkCNNConnection weight2io_new[];
-  weight2io_new.resize(n);
+  MkCNNConnection weight2io_new[]; weight2io_new.resize(n);
   for (Index i=0; i<this.weight2io.size(); i++)
     if(swaps[i] >= 0) 
       weight2io_new[swaps[i]] = this.weight2io[i];
@@ -203,10 +172,10 @@ protected MkCNNLayerPartial.remap!() {
 /// Parallalized task for Forward propagation
 operator MkCNNLayerPartialFprop_task<<<i>>>(
   Float64 scale_factor,
-  Ref<MkCNNActivationFunctionInterface> h,
+  Ref<MkCNNNeuronFunctionInterface> h,
   MkCNNConnection out2wi[],
-  Float64 b[],
   Float64 w[],
+  Float64 b[],
   Index out2bias[],
   Float64 ins[],
   io Float64 output[]) 
@@ -222,17 +191,23 @@ operator MkCNNLayerPartialFprop_task<<<i>>>(
 /// Forward propagation
 public Float64[] MkCNNLayerPartial.fprop!(Float64 ins[], Index index) {
   
-  Float64 outputs[] = this.output[index];
-
+  Ref<MkCNNNeuronFunctionInterface> h = this.activationFunction();
+  MkCNNConnection out2wi[] = this.out2wi;
+  Float64 scale_factor = this.scale_factor;
+  Index out2bias[] = this.out2bias;
+  Float64 w[] = this.w;
+  Float64 b[] = this.b;
+  Float64 output[] = this.output[index];
+ 
   MkCNNLayerPartialFprop_task<<<this.out_size>>>(
-    this.scaleFactor(), 
-    this.activationFunction(),
-    this.out2wi(),
-    this.bias(),
-    this.weight(),
-    this.out2bias(),
+    scale_factor, 
+    h,
+    out2wi,
+    w,
+    b,
+    out2bias,
     ins,
-    outputs);
+    output);
 
   return (this.next() != null) ? this.next().fprop(this.output[index], index) : this.output[index]; 
 }
@@ -241,7 +216,7 @@ public Float64[] MkCNNLayerPartial.fprop!(Float64 ins[], Index index) {
 /// Parallalized task for Backward propagation
 operator MkCNNLayerPartialBprop_task_1<<<i>>>(
   Float64 scale_factor,
-  Ref<MkCNNActivationFunctionInterface> prev_h,
+  Ref<MkCNNNeuronFunctionInterface> prev_h,
   MkCNNConnection in2wo[],
   Float64 prev_out[],
   Float64 w[],
@@ -274,22 +249,28 @@ operator MkCNNLayerPartialBprop_task_2<<<i>>>(
 /// Backward propagation 
 public Float64[] MkCNNLayerPartial.bprop!(Float64 current_delta[], Index index) {
 
+  Ref<MkCNNNeuronFunctionInterface> prev_h = this.prev().activationFunction();
+  Float64 scale_factor = this.scale_factor;
+  MkCNNConnection in2wo[] = this.in2wo;
+  MkCNNConnection weight2io[] = this.weight2io;
+  Float64 w[] = this.w;
+  Float64 dw[] = this.dw[index];
+  Float64 prev_output[] = this.prev().output(index);
   Float64 prev_delta[] = this.prev_delta[index];
 
   MkCNNLayerPartialBprop_task_1<<<this.in_size>>>(
-    this.scaleFactor(), 
-    this.prev().activationFunction(),
-    this.in2wo(),
-    this.prev().output(index),
-    this.weight(),
+    scale_factor, 
+    prev_h,
+    in2wo,
+    prev_output,
+    w,
     current_delta, 
     prev_delta);
   
-  Float64 dw[] = this.dw[index];
   MkCNNLayerPartialBprop_task_2<<<this.weight2io.size()>>>(
-    this.scaleFactor(),
-    this.weight2io(), 
-    this.prev().output(index),
+    scale_factor,
+    weight2io, 
+    prev_output,
     current_delta, 
     dw);
  
@@ -325,7 +306,7 @@ operator MkCNNLayerPartialBprop2nd_task_1<<<i>>>(
 /// Parallalized task for 2nd Backward propagation
 operator MkCNNLayerPartialBprop2nd_task_2<<<i>>>(
   Float64 scale_factor,
-  Ref<MkCNNActivationFunctionInterface> prev_h,
+  Ref<MkCNNNeuronFunctionInterface> prev_h,
   Float64 w[],
   MkCNNConnection in2wo[],
   Float64 prev_out[],
@@ -342,22 +323,28 @@ operator MkCNNLayerPartialBprop2nd_task_2<<<i>>>(
 /// 2nd Backward propagation 
 public Float64[] MkCNNLayerPartial.bprop2nd!(Float64 current_delta2[]) {
    
+  Ref<MkCNNNeuronFunctionInterface> prev_h = this.prev().activationFunction();
+  Float64 scale_factor = this.scale_factor;
+  MkCNNConnection in2wo[] = this.in2wo;
+  MkCNNConnection weight2io[] = this.weight2io;
+  Float64 w[] = this.w;
   Float64 w_hessian[] = this.w_hessian;
+  Float64 prev_output[] = this.prev().output(0);
   Float64 prev_delta2[] = this.prev_delta2;
   
   MkCNNLayerPartialBprop2nd_task_1<<<this.weight2io.size()>>>(
-    this.scaleFactor(), 
-    this.weight2io(),
-    this.prev().output(0), 
+    scale_factor, 
+    weight2io,
+    prev_output, 
     current_delta2,
     w_hessian);
 
   MkCNNLayerPartialBprop2nd_task_2<<<this.in_size>>>(
-    this.scaleFactor(), 
-    this.prev().activationFunction(),
-    this.weight(),
-    this.in2wo(),
-    this.prev().output(0), 
+    scale_factor, 
+    prev_h,
+    w,
+    in2wo,
+    prev_output, 
     current_delta2,
     prev_delta2);
 
@@ -438,9 +425,9 @@ public MkCNNLayerAveragePooling(
     in_channels,
     1.0 / (pooling_size*pooling_size));
   
+  this.mode = MK_LAYER_AVERAGE_POOLING;
   this.ins = MkCNNIndex3D(in_width, in_height, in_channels);
   this.outs = MkCNNIndex3D(in_width/pooling_size, in_height/pooling_size, in_channels);
-  
   this.initConnection(pooling_size);
 }
 
@@ -524,13 +511,12 @@ public MkCNNLayerConvolutional(
     out_channels,
     1.0);
 
+  this.mode = MK_LAYER_CONVOLUTIONAL;
   this.ins = MkCNNIndex3D(in_width, in_height, in_channels);
   this.outs = MkCNNIndex3D((in_width - window_size + 1), (in_height - window_size + 1), out_channels);
   this.weight = MkCNNIndex3D(window_size, window_size, in_channels*out_channels);
   this.window_size = window_size;
-
-  MkCNNConnectionTable connection;
-  this.initConnection(connection);
+  this.initConnection(MkCNNConnectionTable());
 }
 
 /// Constructor
@@ -550,6 +536,7 @@ public MkCNNLayerConvolutional(
     out_channels,
     1.0);
 
+  this.mode = MK_LAYER_CONVOLUTIONAL;
   this.ins = MkCNNIndex3D(in_width, in_height, in_channels);
   this.outs = MkCNNIndex3D((in_width - window_size + 1), (in_height - window_size + 1), out_channels);
   this.weight = MkCNNIndex3D(window_size, window_size, in_channels*out_channels);

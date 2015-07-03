@@ -48,11 +48,6 @@ interface MkCNNLayerInterface {
 	Index fanInSize() ;
 	Index connectionSize();
   Float64[] output(Index index);
-  Float64[] delta(Index index);
-  Float64[] weight();
-  Float64[] bias();
-  Float64[] weightDiff(Index index);
-  Float64[] biasDiff(Index index);
   Boolean connect!(io MkCNNLayerInterface tail);
   initWeight!();
   postUpdate!();
@@ -62,7 +57,7 @@ interface MkCNNLayerInterface {
   prev!(Ref<MkCNNLayerInterface> hs);
   Ref<MkCNNLayerInterface> next();
   next!(Ref<MkCNNLayerInterface> hs);
-  Ref<MkCNNActivationFunctionInterface> activationFunction();
+  Ref<MkCNNNeuronFunctionInterface> activationFunction();
   Float64[] fprop!(Float64 ins[], Index index);
   Float64[] bprop!(Float64 current_delta[], Index index);
   Float64[] bprop2nd!(Float64 current_delta2[]);
@@ -73,7 +68,7 @@ interface MkCNNLayerInterface {
 /// Base class of all kind of NN layers
 object MkCNNLayerBase : MkCNNLayerInterface {
   protected Index mode;
-  protected MkCCNConfig config;
+  protected MkCCNDefs defs;
   protected Index in_size;                      // Layer input size
   protected Index out_size;                     // Layer output size
   protected Float64 output[][];                 // last output of current layer, set by fprop
@@ -85,7 +80,7 @@ object MkCNNLayerBase : MkCNNLayerInterface {
   protected Float64 w_hessian[];                // diagonal terms of the wieght hessian matrix 
   protected Float64 b_hessian[];                // diagonal terms of the bias hessian matrix 
   protected Float64 prev_delta2[];              // d^2E/da^2
-  protected MkCNNActivationFunctionInterface a; // Activation function
+  protected MkCNNNeuronFunctionInterface a; // Activation function
   protected Ref<MkCNNLayerInterface> next;      // Reference to the next layer, foward propagation
   protected Ref<MkCNNLayerInterface> prev;      // Reference to the previous layer, backward propagation
 };
@@ -129,31 +124,31 @@ protected MkCNNLayerBase.init!(
   Index bias_size) 
 {
   this.mode = MK_LAYER_BASE;
-  this.output.resize(this.config.taskSize());
-  this.prev_delta.resize(this.config.taskSize());
-  this.dw.resize(this.config.taskSize());
-  this.db.resize(this.config.taskSize());
+  this.output.resize(this.defs.taskSize());
+  this.prev_delta.resize(this.defs.taskSize());
+  this.dw.resize(this.defs.taskSize());
+  this.db.resize(this.defs.taskSize());
   this.setSize(in_size, out_size, weight_size, bias_size);
 
   switch(activation) {
-    case MK_ACTIVATION_FUNC_IDENTITY :
-      this.a = MkCNNActivationFunctionIdentity();
+    case MK_NEURON_FUNC_IDENTITY :
+      this.a = MkCNNNeuronFunctionIdentity();
     break;
 
-     case MK_ACTIVATION_FUNC_SIGMOID :
-      this.a = MkCNNActivationFunctionSigmoid();
+     case MK_NEURON_FUNC_SIGMOID :
+      this.a = MkCNNNeuronFunctionSigmoid();
     break;
 
-     case MK_ACTIVATION_FUNC_RECTIFIEDLINEAR :
-      this.a = MkCNNActivationFunctionRectifiedLinear();
+     case MK_NEURON_FUNC_RECTIFIEDLINEAR :
+      this.a = MkCNNNeuronFunctionRectifiedLinear();
     break;
 
-     case MK_ACTIVATION_FUNC_TANH :
-      this.a = MkCNNActivationFunctionTanH();
+     case MK_NEURON_FUNC_TANH :
+      this.a = MkCNNNeuronFunctionTanH();
     break;
 
     default :
-      this.a = MkCNNActivationFunctionIdentity();
+      this.a = MkCNNNeuronFunctionIdentity();
     break;
   }
 }
@@ -172,7 +167,7 @@ public MkCNNLayerBase(
 /// Display the class attributs
 public MkCNNLayerBase.display() {
   report("\nMkCNNLayerBase Attributs");
-  report("config "          + this.config);
+  report("defs "            + this.defs);
   report("inSize "          + this.in_size);
   report("outSize "         + this.out_size);
   report("weightSize "      + this.w.size());
@@ -228,7 +223,7 @@ public Index MkCNNLayerBase.outSize() {
   return this.out_size; 
 }
 
-/// Return the number of parameters (i.e. the number of weight)
+/// Return the number of parameters (i.e. the number of weights)
 public Index MkCNNLayerBase.paramSize() { 
   return this.w.size() + this.b.size(); 
 }
@@ -245,46 +240,6 @@ public Index MkCNNLayerBase.connectionSize() {
 /// \internal
 protected Float64[] MkCNNLayerBase.output(Index index) { 
 	return this.output[index]; 
-}
-
-/// \internal
-protected Float64[] MkCNNLayerBase.delta(Index index) { 
-	return this.prev_delta[index]; 
-}
-
-/// \internal
-protected Float64[] MkCNNLayerBase.weight() { 
-	return this.w; 
-}
-
-/// \internal
-protected Float64[] MkCNNLayerBase.bias() { 
-	return this.b; 
-}
-
-/// \internal
-protected Float64[] MkCNNLayerBase.weightDiff(Index index) {
-  return this.dw[index];
-}
-
-/// \internal
-protected Float64[] MkCNNLayerBase.biasDiff(Index index) {
-  return this.db[index];
-}
-
-/// \internal
-protected Float64[] MkCNNLayerBase.weightHessian() {
-  return this.w_hessian;
-}
-
-/// \internal
-protected Float64[] MkCNNLayerBase.biasHessian() {
-  return this.b_hessian;
-}
-
-/// \internal
-protected Float64[] MkCNNLayerBase.prevDelta2() {
-  return this.prev_delta2;
 }
 
 /// Check if this and other layers have same weigth
@@ -304,7 +259,7 @@ public Boolean MkCNNLayerBase.hasSameWeights(Ref<MkCNNLayerBase> other, Float64 
 }
 
 /// Return a pointer to the activation function
-public Ref<MkCNNActivationFunctionInterface> MkCNNLayerBase.activationFunction() {
+public Ref<MkCNNNeuronFunctionInterface> MkCNNLayerBase.activationFunction() {
   return this.a;
 }
 
@@ -363,7 +318,7 @@ public MkCNNLayerBase.initWeight!() {
   
   for(Index i=0; i<this.w_hessian.size(); ++i) this.w_hessian[i] = 0.0;   
   for(Index i=0; i<this.b_hessian.size(); ++i) this.b_hessian[i] = 0.0;   
-  this.clearDiff(this.config.taskSize());
+  this.clearDiff(this.defs.taskSize());
 }
 
 /// \internal
@@ -450,7 +405,8 @@ object MkCNNLayerInput : MkCNNLayerBase {};
 
 /// Constructor
 public MkCNNLayerInput() {
-  this.init(MK_ACTIVATION_FUNC_IDENTITY, 0, 0, 0, 0);
+  this.init(MK_NEURON_FUNC_IDENTITY, 0, 0, 0, 0);
+  this.mode = MK_LAYER_INPUT;
 }
 
 /// Return the number of layer inputs
@@ -553,12 +509,11 @@ public MkCNNLayerMaxPooling(
     in_width * in_height * in_channels / (pooling_size*pooling_size), 
     0, 0);
 
+  this.mode = MK_LAYER_MAX_POOLING;
   this.in_index = MkCNNIndex3D(in_width, in_height, in_channels);
   this.in_index = MkCNNIndex3D(in_width / pooling_size, in_height / pooling_size, in_channels);
-     
   //if ((in_width % pooling_size) || (in_height % pooling_size))
   //  throw nn_error("width/height must be multiples of pooling size");
- 
   this.initConnection(in_width, in_height, in_channels, pooling_size);
 }
 
@@ -612,7 +567,7 @@ public Float64[] MkCNNLayerMaxPooling.fprop!(Float64 ins[], Index index) {
 /// \internal
 /// Parallalized task for Backward propagation
 operator MkCNNLayerMaxPoolingBprop_task<<<i>>>(
-  Ref<MkCNNActivationFunctionInterface> prev_h,
+  Ref<MkCNNNeuronFunctionInterface> prev_h,
   Index out2in_max[],
   Index in2out[][],
   Float64 prev_out[],
@@ -626,15 +581,17 @@ operator MkCNNLayerMaxPoolingBprop_task<<<i>>>(
 /// Backward propagetion 
 public Float64[] MkCNNLayerMaxPooling.bprop!(Float64 current_delta[], Index index) {
   
+  Ref<MkCNNNeuronFunctionInterface> prev_h = this.prev().activationFunction();
+  Float64 prev_output[] = this.prev().output(index);
   Float64 prev_delta[] = this.prev_delta[index];
   Index in2out[][] = this.in2out;
   Index out2in_max[] = this.out2in_max;
  
   MkCNNLayerMaxPoolingBprop_task<<<this.in_size>>>(
-    this.prev().activationFunction(),
+    prev_h,
     out2in_max,
     in2out,
-    this.prev().output(index),
+    prev_output,
     current_delta,
     prev_delta);
 
@@ -644,7 +601,7 @@ public Float64[] MkCNNLayerMaxPooling.bprop!(Float64 current_delta[], Index inde
 /// \internal
 /// Parallalized task for 2nd Backward propagation
 operator MkCNNLayerMaxPoolingBprop2nd_task<<<i>>>(
-  Ref<MkCNNActivationFunctionInterface> prev_h,
+  Ref<MkCNNNeuronFunctionInterface> prev_h,
   Index out2in_max[],
   Index in2out[][],
   Float64 prev_out[],
@@ -658,15 +615,17 @@ operator MkCNNLayerMaxPoolingBprop2nd_task<<<i>>>(
 /// 2nd Backward propagetion 
 public Float64[] MkCNNLayerMaxPooling.bprop2nd!(Float64 current_delta2[]) {
 
+  Ref<MkCNNNeuronFunctionInterface> prev_h = this.prev().activationFunction();
+  Float64 prev_output[] = this.prev().output(0);
   Float64 prev_delta2[] = this.prev_delta2;
   Index in2out[][] = this.in2out;
   Index out2in_max[] = this.out2in_max;  
   
   MkCNNLayerMaxPoolingBprop2nd_task<<<this.in_size>>>(
-    this.prev().activationFunction(),
+    prev_h,
     out2in_max,
     in2out,
-    this.prev().output(0),
+    prev_output,
     current_delta2,
     prev_delta2);
 
@@ -704,6 +663,7 @@ public MkCNNLayers.display() {
     this.layers[l].display();
 }
 
+/// Add a new layer to the stack
 public MkCNNLayers.add!(io MkCNNLayerInterface new_tail) {
   if(this.tail() != null)
     this.tail().connect(new_tail);

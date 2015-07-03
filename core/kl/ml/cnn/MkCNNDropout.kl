@@ -96,7 +96,7 @@ const Index DROPOUT_MODE_PER_BATCH      = 1;
 
 /// Class for drop-out layer 
 object MkCNNDropout : MkCNNFilterInterface {
-  private MkCCNConfig config;
+  private MkCCNDefs defs;
   private Index out_size;
   private Index mask[];
   private Float64 masked_out[][];
@@ -114,9 +114,9 @@ function MkCNNDropout(Index out_size) {
   this.dropout_rate = 0.5;
   this.mask.resize(out_size);
 
-  this.masked_out.resize(this.config.taskSize());
-  this.masked_delta.resize(this.config.taskSize());
-  for (Index i=0; i<this.config.taskSize(); i++) 
+  this.masked_out.resize(this.defs.taskSize());
+  this.masked_delta.resize(this.defs.taskSize());
+  for (Index i=0; i<this.defs.taskSize(); i++) 
   {
     this.masked_out[i].resize(out_size);
     this.masked_delta[i].resize(out_size);

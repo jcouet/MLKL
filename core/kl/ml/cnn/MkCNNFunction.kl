@@ -108,14 +108,14 @@ public Float32 MkCNNLossFunctionCE.df(Float32 y, Float32 t) {
                                           /***********************/
 
 /**************************************************************************************************/
-/*                                          Activation functions                                  */
-const Index MK_ACTIVATION_FUNC_IDENTITY = 0;
-const Index MK_ACTIVATION_FUNC_SIGMOID = 1;
-const Index MK_ACTIVATION_FUNC_RECTIFIEDLINEAR = 2;
-const Index MK_ACTIVATION_FUNC_TANH = 3;
+/*                                             Neuron functions                                   */
+const Index MK_NEURON_FUNC_IDENTITY = 0;
+const Index MK_NEURON_FUNC_SIGMOID = 1;
+const Index MK_NEURON_FUNC_RECTIFIEDLINEAR = 2;
+const Index MK_NEURON_FUNC_TANH = 3;
  
 /// Interface for activation function 
-interface MkCNNActivationFunctionInterface {
+interface MkCNNNeuronFunctionInterface {
   Float64 f(Float64 x);
   Float64 df(Float64 x);
   Vec2 scale();
@@ -124,133 +124,133 @@ interface MkCNNActivationFunctionInterface {
 };
 
 /// Base class for activation function 
-object MkCNNActivationFunctionBase : MkCNNActivationFunctionInterface {
+object MkCNNNeuronFunctionBase : MkCNNNeuronFunctionInterface {
   protected Index mode; // Mode
 };
 
 /// Return the current mode
-public Index MkCNNActivationFunctionBase.mode() {
+public Index MkCNNNeuronFunctionBase.mode() {
   return this.mode;
 }
 
 /// Return the current mode as string
-public String MkCNNActivationFunctionBase.modeAsStr() {
+public String MkCNNNeuronFunctionBase.modeAsStr() {
 
-  if(this.mode == MK_ACTIVATION_FUNC_IDENTITY)
-    return "MK_ACTIVATION_FUNC_IDENTITY";
+  if(this.mode == MK_NEURON_FUNC_IDENTITY)
+    return "MK_NEURON_FUNC_IDENTITY";
     
-  else if(this.mode == MK_ACTIVATION_FUNC_SIGMOID)
-    return "MK_ACTIVATION_FUNC_SIGMOID";
+  else if(this.mode == MK_NEURON_FUNC_SIGMOID)
+    return "MK_NEURON_FUNC_SIGMOID";
 
-  else if(this.mode == MK_ACTIVATION_FUNC_RECTIFIEDLINEAR)
-    return "MK_ACTIVATION_FUNC_RECTIFIEDLINEAR";
+  else if(this.mode == MK_NEURON_FUNC_RECTIFIEDLINEAR)
+    return "MK_NEURON_FUNC_RECTIFIEDLINEAR";
 
-  else if(this.mode == MK_ACTIVATION_FUNC_TANH)
-    return "MK_ACTIVATION_FUNC_TANH";
+  else if(this.mode == MK_NEURON_FUNC_TANH)
+    return "MK_NEURON_FUNC_TANH";
 
   else
-    return "MK_ACTIVATION_UNKNOWN";
+    return "MK_NEURON_UNKNOWN";
 }
 
 /// Return the value of the function at point x
 /// To be overload
-public Float64 MkCNNActivationFunctionBase.f(Float64 x) {
+public Float64 MkCNNNeuronFunctionBase.f(Float64 x) {
   return 0.0;
 }
 
 /// Return the value of the function derivate point x
 /// To be overload
-public Float64 MkCNNActivationFunctionBase.df(Float64 x) {
+public Float64 MkCNNNeuronFunctionBase.df(Float64 x) {
   return 0.0;
 }
 
 /// Return the current scale
 /// To be overload
-public Vec2 MkCNNActivationFunctionBase.scale() {
+public Vec2 MkCNNNeuronFunctionBase.scale() {
   return Vec2(1.0, 1.0);
 }
 
 
 /// Identity 
-object MkCNNActivationFunctionIdentity : MkCNNActivationFunctionBase {};
+object MkCNNNeuronFunctionIdentity : MkCNNNeuronFunctionBase {};
 
-function MkCNNActivationFunctionIdentity() {
-  this.mode = MK_ACTIVATION_FUNC_IDENTITY;
+function MkCNNNeuronFunctionIdentity() {
+  this.mode = MK_NEURON_FUNC_IDENTITY;
 }
 
-public Float64 MkCNNActivationFunctionIdentity.f(Float64 x) {
+public Float64 MkCNNNeuronFunctionIdentity.f(Float64 x) {
   return x;
 }
 
-public Float64 MkCNNActivationFunctionIdentity.df(Float64 x) {
+public Float64 MkCNNNeuronFunctionIdentity.df(Float64 x) {
   return 1;
 }
 
-public Vec2 MkCNNActivationFunctionIdentity.scale() {
+public Vec2 MkCNNNeuronFunctionIdentity.scale() {
   return Vec2(0.1, 0.9);
 }
 
 
 /// Sigmoid
-object MkCNNActivationFunctionSigmoid : MkCNNActivationFunctionBase {};
+object MkCNNNeuronFunctionSigmoid : MkCNNNeuronFunctionBase {};
 
-function MkCNNActivationFunctionSigmoid() {
-  this.mode = MK_ACTIVATION_FUNC_SIGMOID;
+function MkCNNNeuronFunctionSigmoid() {
+  this.mode = MK_NEURON_FUNC_SIGMOID;
 }
 
-public Float64 MkCNNActivationFunctionSigmoid.f(Float64 x) {
+public Float64 MkCNNNeuronFunctionSigmoid.f(Float64 x) {
   return 1.0 / (1.0 + exp(-x));
 }
 
-public Float64 MkCNNActivationFunctionSigmoid.df(Float64 x) {
+public Float64 MkCNNNeuronFunctionSigmoid.df(Float64 x) {
   return x * (1.0 - x);
 }
 
-public Vec2 MkCNNActivationFunctionSigmoid.scale() {
+public Vec2 MkCNNNeuronFunctionSigmoid.scale() {
   return Vec2(0.1, 0.9);
 }
 
 
 /// Linear
-object MkCNNActivationFunctionRectifiedLinear : MkCNNActivationFunctionBase {};
+object MkCNNNeuronFunctionRectifiedLinear : MkCNNNeuronFunctionBase {};
 
-function MkCNNActivationFunctionRectifiedLinear() {
-  this.mode = MK_ACTIVATION_FUNC_RECTIFIEDLINEAR;
+function MkCNNNeuronFunctionRectifiedLinear() {
+  this.mode = MK_NEURON_FUNC_RECTIFIEDLINEAR;
 }
 
-public Float64 MkCNNActivationFunctionRectifiedLinear.f(Float64 x) {
+public Float64 MkCNNNeuronFunctionRectifiedLinear.f(Float64 x) {
   return Math_max(0.0, x); 
 }
 
-public Float64 MkCNNActivationFunctionRectifiedLinear.df(Float64 x) {
+public Float64 MkCNNNeuronFunctionRectifiedLinear.df(Float64 x) {
   return (x > 0.0) ? 1.0 : 0.0;
 }
 
-public Vec2 MkCNNActivationFunctionRectifiedLinear.scale() {
+public Vec2 MkCNNNeuronFunctionRectifiedLinear.scale() {
   return Vec2(0.1, 0.9);
 }
 
 
 /// Tangeante hyperbolic
-object MkCNNActivationFunctionTanH : MkCNNActivationFunctionBase {};
+object MkCNNNeuronFunctionTanH : MkCNNNeuronFunctionBase {};
 
-function MkCNNActivationFunctionTanH() {
-  this.mode = MK_ACTIVATION_FUNC_TANH;
+function MkCNNNeuronFunctionTanH() {
+  this.mode = MK_NEURON_FUNC_TANH;
 }
 
-public Float64 MkCNNActivationFunctionTanH.f(Float64 x) {
+public Float64 MkCNNNeuronFunctionTanH.f(Float64 x) {
   Float64 ep = exp(x);
   Float64 em = exp(-x); 
   return (ep - em) / (ep + em);
 }
 
-public Float64 MkCNNActivationFunctionTanH.df(Float64 x) {
+public Float64 MkCNNNeuronFunctionTanH.df(Float64 x) {
   return 1.0 - x * x;
 }
 
-public Vec2 MkCNNActivationFunctionTanH.scale() {
+public Vec2 MkCNNNeuronFunctionTanH.scale() {
   return Vec2(-0.8, 0.8);
 }
-/*                                          Activation functions                                  */
+/*                                             Neuron functions                                   */
 /**************************************************************************************************/
 

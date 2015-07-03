@@ -17,6 +17,6 @@
     "ml/cnn/MkCNNLayerPartial.kl",
     "ml/cnn/MkCNNLayerFully.kl",
     "ml/cnn/MkCNNNetwork.kl",
-    "ml/cnn/MkCNNNNConfig.kl"
+    "ml/cnn/MkCNNConfig.kl"
   ]
 }

@@ -26,37 +26,35 @@ require MLKL;
 
 /**************************************************************************************************/
 /*                                          Activation functions                                  */
-/// Class for netork configuration 
+/// Class for network layers configuration 
 struct MkCNNLayerDefs {}; 
 
-/// \Internal
 /// Parse the layers configuration parameter relative to the activation function
-private Boolean MkCNNLayerDefs.parseActivationFunction(
+private Boolean MkCNNLayerDefs.parseNeuronFunction(
   String line, 
-  io Index activation_func)
+  io Index neuron_func)
 {
   if(line == "id") { 
-    activation_func = MK_ACTIVATION_FUNC_IDENTITY; 
+    neuron_func = MK_NEURON_FUNC_IDENTITY; 
     return true; 
   }
   else if(line == "sig") { 
-    activation_func = MK_ACTIVATION_FUNC_SIGMOID; 
+    neuron_func = MK_NEURON_FUNC_SIGMOID; 
     return true; 
   }
   else if(line == "relu") {
-    activation_func = MK_ACTIVATION_FUNC_RECTIFIEDLINEAR; 
+    neuron_func = MK_NEURON_FUNC_RECTIFIEDLINEAR; 
     return true; 
   }
   else if(line == "tanh") { 
-    activation_func = MK_ACTIVATION_FUNC_TANH; 
+    neuron_func = MK_NEURON_FUNC_TANH; 
     return true; 
   }
   else return false;
 }
 
-/// \Internal
-/// Parse the layers configuration and create them
 /// TO-DO
+/// Parse the layers configuration and create them
 private Boolean MkCNNLayerDefs.parseData(
   String layer_name,
   io TextReader reader, 
@@ -66,20 +64,19 @@ private Boolean MkCNNLayerDefs.parseData(
   return true;
 }
 
-/// \Internal
 /// Parse the layers configuration and create them
 private Boolean MkCNNLayerDefs.parseConvolutional(
   String layer_name,
   io TextReader reader, 
   io MkCNNLayerInterface layers[]) 
 {
-  Index activation_func, in_size, window_size;
+  Index neuron_func, in_size, window_size;
   Index in_channels, out_channels, params_counter = 0;
 
   String line = reader.readLine();
   if(line.find("neuron=") > -1) {
     String neuron_type = line.subString(line.find("neuron=") + String("neuron=").length(), line.length());
-    if(this.parseActivationFunction(neuron_type, activation_func)) 
+    if(this.parseNeuronFunction(neuron_type, neuron_func)) 
       params_counter ++;    
     line = reader.readLine();
   }
@@ -108,21 +105,21 @@ private Boolean MkCNNLayerDefs.parseConvolutional(
     line = reader.readLine();  
   }
 
-  report("\nConvolutional");
+  report("\nConvolutional Layer " + layer_name);
   if(params_counter != 5) {
     report("Error, wrong parameter order");
     return false;
   }
   else {
-    report("activation_func " + activation_func);
+    report("neuron_func " + neuron_func);
     report("in_size "         + in_size);
     report("window_size "     + window_size);
     report("in_channels "     + in_channels);
     report("out_channels "    + out_channels);
 
-    //MK_ACTIVATION_FUNC_TANH, 32, 32, 5, 1, 6));
+    //MK_NEURON_FUNC_TANH, 32, 32, 5, 1, 6));
     layers.push(MkCNNLayerConvolutional(
-      activation_func,
+      neuron_func,
       in_size, in_size, window_size,  
       in_channels, out_channels));
 
@@ -130,14 +127,13 @@ private Boolean MkCNNLayerDefs.parseConvolutional(
   }
 }
 
-/// \Internal
 /// Parse the layers configuration and create them
 private Boolean MkCNNLayerDefs.parsePooling(
   String layer_name,
   io TextReader reader,
   io MkCNNLayerInterface layers[]) 
 {
-  Index pool_type, activation_func, in_size;
+  Index pool_type, neuron_func, in_size;
   Index in_channels, pooling_size, params_counter = 0;
 
   String line = reader.readLine();
@@ -155,7 +151,7 @@ private Boolean MkCNNLayerDefs.parsePooling(
   }
   if(line.find("neuron=") > -1) {
     String neuron_type = line.subString(line.find("neuron=") + String("neuron=").length(), line.length());
-    if(this.parseActivationFunction(neuron_type, activation_func)) 
+    if(this.parseNeuronFunction(neuron_type, neuron_func)) 
       params_counter ++;    
     line = reader.readLine();
   }
@@ -178,43 +174,42 @@ private Boolean MkCNNLayerDefs.parsePooling(
     line = reader.readLine();  
   }
 
-  report("\nPooling");
+  report("\nPooling Layer " + layer_name);
   if(params_counter != 5) {
     report("Error, wrong parameter order");
     return false;
   }
   else {
     report("pool_type "       + pool_type);
-    report("activation_func " + activation_func);
+    report("neuron_func " + neuron_func);
     report("in_size "         + in_size);
     report("in_channels "     + in_channels);
     report("pooling_size "    + pooling_size);
 
     if(pool_type == 0)
       layers.push(MkCNNLayerAveragePooling(
-        activation_func,in_size, in_size,  
+        neuron_func,in_size, in_size,  
         in_channels, pooling_size));
     else
       layers.push(MkCNNLayerMaxPooling(
-        activation_func,in_size, in_size,  
+        neuron_func,in_size, in_size,  
         in_channels, pooling_size));
     return true;
   }
 }
 
-/// \Internal
 /// Parse the layers configuration and create them
 private Boolean MkCNNLayerDefs.parseFully(
   String layer_name,
   io TextReader reader, 
   io MkCNNLayerInterface layers[]) 
 {
-  Index activation_func, in_channels, out_channels, params_counter = 0;
+  Index neuron_func, in_channels, out_channels, params_counter = 0;
 
   String line = reader.readLine();
   if(line.find("neuron=") > -1) {
     String neuron_type = line.subString(line.find("neuron=") + String("neuron=").length(), line.length());
-    if(this.parseActivationFunction(neuron_type, activation_func)) 
+    if(this.parseNeuronFunction(neuron_type, neuron_func)) 
       params_counter ++;    
     line = reader.readLine();
   }
@@ -231,28 +226,27 @@ private Boolean MkCNNLayerDefs.parseFully(
     line = reader.readLine();  
   }
 
-  report("\nFully");
+  report("\nFully-Connected Layer " + layer_name);
   if(params_counter != 3) {
     report("Error, wrong parameter order");
     return false;
   }
   else {
-    report("activation_func " + activation_func);
+    report("neuron_func " + neuron_func);
     report("in_channels "     + in_channels);
     report("out_channels "    + out_channels);
-    layers.push(MkCNNLayerFully(activation_func, in_channels, out_channels));
+    layers.push(MkCNNLayerFully(neuron_func, in_channels, out_channels));
     return true;
   }
 }
 
-/// \Internal
 /// Parse the layers configuration and create them
 public Boolean MkCNNLayerDefs.parse(String path_def, io MkCNNLayerInterface layers[]) {
 
   TextReader reader();
-  if(!reader.open(path_def))
-    return false;
+  if(!reader.open(path_def)) return false;
 
+  report("\n--- Definition ---");
   while(!reader.eof()) 
   {
     String line = reader.readLine();
@@ -299,14 +293,15 @@ public Boolean MkCNNLayerDefs.parse(String path_def, io MkCNNLayerInterface laye
 
 /**************************************************************************************************/
 /*                                          Activation functions                                  */
-/// Class for netork configuration 
+/// TO-DO
+/// Class for network layers parameters 
 struct MkCNNLayerParams {}; 
 
-/// \Internal
+/// TO-DO
 /// Parse the layers initial parameters
 public Boolean MkCNNLayerParams.parse(String path_params, io MkCNNLayerInterface layers[]) {
   TextReader reader(path_params);
-  
+  report("\n--- Parameters ---");
   return true;
 }
 /*                                              Loss functions                                    */
@@ -316,10 +311,9 @@ public Boolean MkCNNLayerParams.parse(String path_params, io MkCNNLayerInterface
 
 /**************************************************************************************************/
 /*                                          Activation functions                                  */
-/// Class for netork configuration 
+/// Class for network configuration 
 struct MkCNNLayerConfig {}; 
 
-/// \Internal
 /// Check if the layers input / output size of correct
 private Boolean MkCNNLayerConfig.check(io MkCNNLayerInterface layers[]) {
   return true;
@@ -333,6 +327,7 @@ public Boolean MkCNNLayerConfig.config(
 {
   MkCNNLayerDefs layer_defs;
   MkCNNLayerParams layer_params;
+  report("\n\n------ Layers ------");
 
   if(!layer_defs.parse(path_def, layers)) return false;
   if(!layer_params.parse(path_params, layers)) return false;
@@ -346,4 +341,85 @@ public MkCNNLayerConfig.load() {
 }
 /*                                              Loss functions                                    */
 /**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                          Activation functions                                  */
+/// Class for network configuration 
+struct MkCNNConfig {
+  Index nb_epoch;
+  Index optimizer;
+  Index batch_size;
+  Index loss_function;
+  String layers_defs_path;
+  String layers_params_path;
+  String train_images_path;
+  String test_images_path;
+  String train_labels_path;
+  String test_labels_path;
+  MkCNNLayerConfig layer_config;
+};
+
+public MkCNNConfig() {
+  this.setDefault();
+}
+
+public MkCNNConfig.setDefault!() {
+  this.nb_epoch = 5;
+  this.batch_size = 100;
+  
+  String input_dir_path = "C:\\Users\\Julien\\Documents\\Dev\\MLKL\\data\\mnist\\";
+  this.train_images_path = input_dir_path + "train-images.idx3-ubyte";
+  this.test_images_path = input_dir_path + "t10k-images.idx3-ubyte";
+  this.train_labels_path = input_dir_path + "train-labels.idx1-ubyte";
+  this.test_labels_path = input_dir_path + "t10k-labels.idx1-ubyte";
+  
+  String layer_dir_path = "C:\\Users\\Julien\\Documents\\Dev\\MLKL\\app\\samples\\cnn\\";
+  this.layers_defs_path = layer_dir_path + "layers_def.mlkl";
+  this.layers_params_path = layer_dir_path + "layers_params.mlkl";
+
+  this.optimizer = MK_OPTIMIZER_GDLM;
+  this.loss_function = MK_LOSS_FUNC_MSE;
+}
+
+public Index MkCNNConfig.lossFunction() {
+  return this.loss_function;
+}
+
+public Index MkCNNConfig.optimizer() {
+  return this.optimizer;
+}
+
+private Boolean MkCNNConfig.config!(String config_path) {
+  report("\n------ Network ------\n");
+
+  report("nb_epoch "            + this.nb_epoch);
+  report("optimizer "           + this.optimizer);
+  report("batch_size "          + this.batch_size);
+  report("loss_function "       + this.loss_function);
+  report(" ");
+  report("layers_defs_path "    + this.layers_defs_path);
+  report("layers_params_path "  + this.layers_params_path);
+  report("train_images_path "   + this.train_images_path);
+  report("test_images_path "    + this.test_images_path);
+  report("train_labels_path "   + this.train_labels_path);
+  report("test_labels_path "    + this.test_labels_path);
+  return true;
+}
+
+public Boolean MkCNNConfig.config!(String config_path, io MkCNNLayerInterface layers[]) {
+  report("\n\n\n-------------------- Configuration --------------------");
+
+  if(!this.config(config_path))
+    return false;
+
+  return this.layer_config.config(
+    this.layers_defs_path, 
+    this.layers_params_path, 
+    layers);
+}
+/*                                              Loss functions                                    */
+/**************************************************************************************************/
+
  

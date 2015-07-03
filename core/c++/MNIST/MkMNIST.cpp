@@ -32,7 +32,7 @@ void ReverseEndianFunc(unsigned char * b, int n) {
    int j = n-1;
    while (i<j)
    {
-      std::swap(b[i], b[j]);
+      swap(b[i], b[j]);
       i++, j--;
    }
 }
@@ -103,7 +103,7 @@ inline void parseMNISTImage(
     {
       dst[width * (y + y_padding) + x + x_padding]
       = (image_vec[y * header.num_cols + x] / 255.0) * (scale_max - scale_min) + scale_min;
-      //std::cerr << "dst[" << y << "][" << x << "] " << dst[width * (y + y_padding) + x + x_padding] << std::endl;
+      //cerr << "dst[" << y << "][" << x << "] " << dst[width * (y + y_padding) + x + x_padding] << endl;
     }
   }
 }
@@ -153,26 +153,23 @@ FABRIC_EXT_EXPORT void MkMNIST_parseImages(
 /****************/
 
 
-template<typename T> inline
-typename std::enable_if<std::is_integral<T>::value, T>::type
-UniformRand(T min, T max) {
-  static std::mt19937 gen(1);
-  std::uniform_int_distribution<T> dst(min, max);
+template<typename T> inline 
+typename enable_if<is_integral<T>::value, T>::type UniformRand(T min, T max) {
+  static mt19937 gen(1);
+  uniform_int_distribution<T> dst(min, max);
   return dst(gen);
 }
 
-template<typename T> inline
-typename std::enable_if<std::is_floating_point<T>::value, T>::type
-UniformRand(T min, T max) {
-  static std::mt19937 gen(1);
-  std::uniform_real_distribution<T> dst(min, max);
+template<typename T> inline 
+typename enable_if<is_floating_point<T>::value, T>::type UniformRand(T min, T max) {
+  static mt19937 gen(1);
+  uniform_real_distribution<T> dst(min, max);
   return dst(gen);
 }
 
-template<typename T>
-void UniformRand(T *val, int size, T min, T max) {
+template<typename T> void UniformRand(T *val, int size, T min, T max) {
   for (int i=0; i<size; ++i) 
-      val[i] = UniformRand(min, max);
+    val[i] = UniformRand(min, max);
 }
  
 FABRIC_EXT_EXPORT void UniformRand_Float64( 
@@ -271,3 +268,8 @@ FABRIC_EXT_EXPORT void Bernoulli_Float32_UInt32(
   res = KL::UInt32(UniformRand(0.0f, 1.0f) <= float(p));
 }
 
+/****************/
+
+FABRIC_EXT_EXPORT void ReportR(KL::Traits< KL::String >::INParam str) {
+  cerr << string(str.data()) << "\r";
+}

@@ -60,3 +60,8 @@ function Bernoulli(Float64 p, io UInt32 res)
  
 function Bernoulli(Float32 p, io UInt32 res) 
 = "Bernoulli_Float32_UInt32";
+
+
+function ReportR(String str) 
+= "ReportR";
+

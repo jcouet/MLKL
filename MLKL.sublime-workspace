@@ -4,6 +4,14 @@
 		"selected_items":
 		[
 			[
+				"rea",
+				"readLine"
+			],
+			[
+				"re",
+				"reader"
+			],
+			[
 				"MkA",
 				"MkCNNActivationFunctionInterface"
 			],
@@ -40,34 +48,42 @@
 	"buffers":
 	[
 		{
-			"file": "core/kl/ml/cnn/MkCNNLayerPartial.kl",
-			"settings":
-			{
-				"buffer_size": 16747,
-				"line_ending": "Windows"
-			}
-		},
-		{
 			"file": "core/kl/ml/cnn/MkCNNLayer.kl",
 			"settings":
 			{
-				"buffer_size": 18580,
+				"buffer_size": 22693,
 				"line_ending": "Windows"
 			}
 		},
 		{
-			"file": "samples/tiny-cnn-master/README.md",
+			"file": "core/kl/ml/cnn/MkCNNDropout.kl",
 			"settings":
 			{
-				"buffer_size": 5298,
-				"line_ending": "Unix"
+				"buffer_size": 5762,
+				"line_ending": "Windows"
 			}
 		},
 		{
-			"file": "core/c++/MNIST/MkMNIST.cpp",
+			"file": "app/samples/MkCCNApp.kl",
 			"settings":
 			{
-				"buffer_size": 7993,
+				"buffer_size": 4341,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "core/kl/ml/cnn/MkCNNNetwork.kl",
+			"settings":
+			{
+				"buffer_size": 13550,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "core/kl/ml/cnn/MkCNNLayerPartial.kl",
+			"settings":
+			{
+				"buffer_size": 18531,
 				"line_ending": "Windows"
 			}
 		},
@@ -75,23 +91,7 @@
 			"file": "core/kl/ml/cnn/MkCNNLayerFully.kl",
 			"settings":
 			{
-				"buffer_size": 6117,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "samples/tiny-cnn-master/include/max_pooling_layer.h",
-			"settings":
-			{
-				"buffer_size": 5859,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "core/c++/MNIST/MkMNIST.kl",
-			"settings":
-			{
-				"buffer_size": 2315,
+				"buffer_size": 7400,
 				"line_ending": "Windows"
 			}
 		}
@@ -120,26 +120,49 @@
 	},
 	"file_history":
 	[
-		"/C/Users/Julien/Documents/Dev/MLKL/README.md",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNUtils.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayerPooling.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayer.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/layers_params.mlkl",
+		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/layers_def.mlkl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNNetwork.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayerFully.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNUtils.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayerPartial.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/data/test.txt",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNNNConfig.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/MkCCNApp.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNFunction.kl",
+		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/FileIO/TextReader.kl",
+		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/Util/StringMethods.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/c++/MNIST/MkMNIST.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/c++/MNIST/MkMNIST.cpp",
+		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/layers_def2.mlkl",
+		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/src/main.cpp",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNOptimizer.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/include/layer.h",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/MLKL.fpm.json",
+		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/include/network.h",
+		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/FileIO/TextWriter.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNDropout.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNConfig.kl",
+		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/FileIO/FileWriter.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/app/tests/MkCNNUnitTest.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/app/tests/MkCNNTest.kl",
+		"/C/Users/Julien/Desktop/AlembicArchiveReaderPablo.kl",
+		"/C/Python27/Lib/ConfigParser.py",
+		"/C/Users/Julien/Documents/Dev/MLKL/conf.py",
+		"/C/Users/Julien/AppData/Local/Temp/sphinx-err-ovg7fd.log",
+		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/README.md",
+		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/include/max_pooling_layer.h",
+		"/C/Users/Julien/Documents/Dev/MLKL/README.md",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayerPooling.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/include/dropout.h",
 		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/include/activation_function.h",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNFunction.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNNetwork.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/svm/MkSVM.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/svm/MkSVMSMO.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/svm/MkSVMMultiClass.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/svm/MkSVMKernel.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/config/environment.bat",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/MLKL.fpm.json",
 		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/MkSVMApp.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/MkCCNApp.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNOptimizer.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayer.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayerPartial.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/MLKL.json",
 		"/C/Users/Julien/Documents/Dev/KL_ML/core/kl/ml/cnn/MkCNNLayer.kl",
 		"/C/Users/Julien/Documents/Dev/KL_ML/KL_KL.sublime-project",
@@ -194,134 +217,134 @@
 		"case_sensitive": false,
 		"find_history":
 		[
-			"MkMNIST",
-			"prev_delta",
-			"current_delta",
-			"out2in",
-			"worker_index",
-			"output_[index]",
-			"float_t",
-			"[]",
-			"out2inmax",
-			"out_",
+			"outputs",
+			"output",
+			"out2bias",
+			"minibatch_size",
+			"i",
+			"iter",
+			"p",
+			"string",
+			"String",
+			"std::",
+			"----------",
+			"/// \\Internal",
+			"netork",
+			"pool_type",
+			"activation_func",
+			"pooling_size",
+			"poolingSize",
+			"outChannels",
+			"poolingSize",
+			"out_channels",
+			"activation_func",
+			"pool_type",
+			"neuron",
+			"out_channels",
+			"outChannels",
+			"MK_LAYER_MAX_POOLING",
+			"MK_LAYER_BASE",
+			"if",
+			"MK_ACTIVATION_FUNC_IDENTITY",
+			"), l",
+			"layer_activation",
+			"parseConvolutional",
+			"activation_func",
+			"filtersStr",
+			"window_sizeStr",
+			"in_channelsStr",
+			"out_channels_strtr",
+			"in_ch",
+			"nC",
+			"in",
 			"in_",
-			"layer_size_t",
-			"in_",
-			"get_index",
-			"layer_size_t",
-			"out2in_",
-			"MkCNNLayerConvolutional",
-			"initConnection",
-			"in2out_",
-			"MkCNNInputLayer",
-			"Average",
-			"MkCNNLayerAveragePooling",
-			"public",
-			"connection_table",
-			"function",
-			"private",
-			"public",
-			"[j]f",
-			"t[j",
-			"first(j",
-			"Config",
-			"Outputs",
-			"MkHashTable",
-			"MkCNNNetworkResult",
-			"NN",
-			"/*                                          Layers (Stack of Layer)                               */\n",
-			"f_x",
-			"size_initialize_hessian",
-			"Gaussian",
-			"object",
-			"function",
-			"initConnection",
-			"connectKernel",
-			"remap",
-			"MkHashTable",
-			"MK_LOSS_FUNC_MCE",
-			"// ",
-			"MkImage",
-			"KL_ML",
-			"endBatch",
-			"shuffle",
-			"MK_LOSS_FUNC_MCE",
-			"function",
-			"private",
+			"filters",
+			"window_size",
+			"neuron_nb",
+			"in_width",
+			"size_str",
+			"n_nb\"",
+			"ron_type\"",
+			"neuron_type",
+			"+1",
+			"size",
+			"neuron",
+			"fprop",
+			"trainOnce",
+			"w_hessian",
+			"divideHessian",
 			"calcHessian",
-			"isCanonicalLink",
 			"targetValueMax",
 			"targetValueMin",
-			"predict",
-			"calcDeltaDiff",
-			"gradientCheck",
-			"table",
-			"connect",
+			"w_hessian",
+			"return true",
+			"checkLayerConfig",
+			"config",
+			"MkCNNNNConfig",
+			"MkCNNLayerParseDefs",
+			"MkCNNParseLayerParams",
+			"parseConvolution",
+			"parseivationFunction",
+			"parseLayer",
+			"MkCNNParseLayerParams",
+			"MkCNNNNConfig",
+			";\n",
+			";",
+			"activation_func =",
+			"ACTIVATION_FUNC",
+			"activation_func",
+			"ACTIVATION_FUNC",
+			"activation_func",
+			"return",
+			"activation_func =",
+			"  ",
+			",",
+			";",
+			"parseLayer",
+			"//",
+			"MkCNNConfig",
+			"TexteReader",
+			"path_layer_param",
+			"path_layer_params",
+			"path_layer_config",
+			"parseLayerConfig",
+			"parseLayerParams",
+			"\\",
+			" //",
+			"inline",
+			"load",
+			"shuffle",
+			"private",
+			"overoad",
+			"calcHessian",
+			"\"",
+			"\\",
+			"//",
+			"modeAsString",
+			"//",
+			"// ",
+			"//",
+			"save",
+			"MkCNNLayerBase",
+			"CreateConnections",
+			"save",
+			"updateWeight",
+			"updateWeights",
+			"divideHessian",
+			"trainOnce",
+			"MK_GRAD_CHECK_RANDOM",
+			"worker_size",
+			"/// Object",
+			"propagetion",
+			"Construct",
 			"construct",
-			"connect",
-			"isCanonicalLink",
-			"getLoss",
-			"public",
-			"function",
-			"connect",
 			"divideHessian",
-			"clearDiff",
+			"rhs",
 			"setSize",
-			"merge",
-			"divideHessian",
-			"public",
-			"connectWeight",
-			"remap",
-			"connectBias",
-			"connectKernel",
-			"initConnection",
-			"remap",
-			"pairs",
-			"remap",
-			"report",
-			"outputs",
-			"in[j]",
-			"ins[batch_index + i*num + j]",
-			"fprop",
-			"Index",
-			"fprop",
-			"bprop",
-			"outs",
-			"bprop",
-			"remap",
-			"connect_weight",
-			"connectWeight",
-			"weight2io",
-			"weight2io\nweight2io",
-			"weight2io",
-			"clear_diff",
-			"post_update",
-			"post_update\npost_update",
-			"post_update",
-			"std",
-			"repo",
-			"out2bias",
-			"bias2out",
-			"calcHessian",
-			"clearDiff",
-			"initWeight",
-			"reset",
-			"\"this",
-			"_[0]_",
-			"db_[0]",
-			"dW_[0]",
-			"this.db[0]",
-			"this.dw[0]",
-			"filter_none",
-			"filter_",
-			"1",
-			"w_1",
-			"_1",
-			"calcHessian",
-			"calc_hessian",
-			"w",
-			"[i][i]",
-			"dw"
+			"DEFAULTSECT",
+			"config",
+			"them",
+			"c"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -339,23 +362,23 @@
 	"groups":
 	[
 		{
-			"selected": 3,
+			"selected": 4,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "core/kl/ml/cnn/MkCNNLayerPartial.kl",
+					"file": "core/kl/ml/cnn/MkCNNLayer.kl",
 					"settings":
 					{
-						"buffer_size": 16747,
+						"buffer_size": 22693,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								5199,
-								5199
+								5910,
+								5910
 							]
 						],
 						"settings":
@@ -365,25 +388,25 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 2184.0,
+						"translation.y": 540.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "core/kl/ml/cnn/MkCNNLayer.kl",
+					"file": "core/kl/ml/cnn/MkCNNDropout.kl",
 					"settings":
 					{
-						"buffer_size": 18580,
+						"buffer_size": 5762,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								6718,
-								6718
+								0,
+								0
 							]
 						],
 						"settings":
@@ -393,31 +416,87 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 2618.0,
+						"translation.y": 1530.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 2,
-					"file": "samples/tiny-cnn-master/README.md",
+					"file": "app/samples/MkCCNApp.kl",
 					"settings":
 					{
-						"buffer_size": 5298,
+						"buffer_size": 4341,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								573,
-								502
+								4054,
+								4054
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/Markdown/Markdown.tmLanguage",
-							"tab_size": 4,
+							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 945.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "core/kl/ml/cnn/MkCNNNetwork.kl",
+					"settings":
+					{
+						"buffer_size": 13550,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4775,
+								4775
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 2475.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "core/kl/ml/cnn/MkCNNLayerPartial.kl",
+					"settings":
+					{
+						"buffer_size": 18531,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								5002,
+								5002
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage",
+							"tab_size": 2,
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
@@ -425,55 +504,27 @@
 						"zoom_level": 1.0
 					},
 					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "core/c++/MNIST/MkMNIST.cpp",
-					"settings":
-					{
-						"buffer_size": 7993,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								4850,
-								4850
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/C++/C++.tmLanguage",
-							"tab_size": 2,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 588.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
 				}
 			]
 		},
 		{
-			"selected": 2,
+			"selected": 0,
 			"sheets":
 			[
 				{
-					"buffer": 4,
+					"buffer": 5,
 					"file": "core/kl/ml/cnn/MkCNNLayerFully.kl",
 					"settings":
 					{
-						"buffer_size": 6117,
+						"buffer_size": 7400,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3235,
-								3284
+								2610,
+								2836
 							]
 						],
 						"settings":
@@ -483,61 +534,7 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 546.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 5,
-					"file": "samples/tiny-cnn-master/include/max_pooling_layer.h",
-					"settings":
-					{
-						"buffer_size": 5859,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								4053,
-								4053
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/C++/C++.tmLanguage",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 1049.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 6,
-					"file": "core/c++/MNIST/MkMNIST.kl",
-					"settings":
-					{
-						"buffer_size": 2315,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								942,
-								942
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage"
-						},
-						"translation.x": 0.0,
-						"translation.y": 42.0,
+						"translation.y": 340.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -573,7 +570,7 @@
 		"cols":
 		[
 			0.0,
-			0.570063694268,
+			0.683337814562,
 			1.0
 		],
 		"rows":
@@ -608,6 +605,6 @@
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 242.0,
+	"side_bar_width": 195.0,
 	"status_bar_visible": true
 }

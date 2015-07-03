@@ -15,22 +15,22 @@ require MLKL;
 
 /**************************************************************************************************/
 /*                                                  Config                                        */
-struct MkCCNConfig {
+struct MkCCNDefs {
   Index task_size;
-  Boolean parallelize;
+  Boolean gpu;
 };
 
-function MkCCNConfig() { 
+function MkCCNDefs() { 
   this.task_size = 1;
-  this.parallelize = true;
+  this.gpu = true;
 }
 
-function Index MkCCNConfig.taskSize() {
+function Index MkCCNDefs.taskSize() {
   return this.task_size;
 }
 
-function Boolean MkCCNConfig.parallelize() { 
-  return this.parallelize;
+function Boolean MkCCNDefs.gpu() { 
+  return this.gpu;
 }
 /*                                                  Config                                        */
 /**************************************************************************************************/
@@ -172,10 +172,12 @@ function MkHashTable(Float64 values[]) {
 }
 
 function Boolean == (MkHashTable lhs, MkHashTable rhs) {
-  if(lhs.values.size() != rhs.values.size()) return false;
+  if(lhs.values.size() != rhs.values.size()) 
+    return false;
 
   for(Index i=0; i<lhs.values.size(); ++i)
-    if(lhs.values[i] != rhs.values[i]) return false;
+    if(lhs.values[i] != rhs.values[i]) 
+      return false;
 
   return true;
 }
@@ -264,7 +266,7 @@ function MkEnumerateData.reset!() {
 
 function MkEnumerateData.display() {
   Float32 percent = 100.0 * this.batch_size * Float32(this.current_size) / Float32(this.training_size); 
-  report("percent " + percent + "%\r");
+  ReportR("Train " + Index(percent) + "%");
 }
 
 function MkEnumerateData.update!() {
@@ -275,8 +277,8 @@ function MkEnumerateData.update!() {
 
 // Display epoch info 
 struct MkEnumerateEpoch {
-  UInt64 start;
-  Float64 decay_learning_rate;
+  UInt64 start; // To compute the procesing time
+  Float64 decay_learning_rate; // Update the optimizer learning rate
 };
 
 function MkEnumerateEpoch() {
@@ -289,27 +291,36 @@ function MkEnumerateEpoch(Float64 decay_learning_rate) {
   this.decay_learning_rate = decay_learning_rate;
 }
 
+/// Display the epoch info + do a test
 function MkEnumerateEpoch.display(
   io Ref<MkCNNNetwork> nn,
   Float64 test_images[][],
   Index test_labels[]) 
 {
+  report("Train 100%");
   Float32 tim = Float32(getCurrentTicks() - this.start)/0.0166666667;
-  report(tim + " mins elapsed.");
+  report("Time " + tim + " mins");
+  
   MkCNNNetworkResult res = nn.test(test_images, test_labels);
   Ref<MkCNNOptimizerInterface> opti = nn.optimizer();
-  report(opti.learningRate() + " ," + res.num_success + "/" + res.num_total);
+  report("Learning rate " + Float32(opti.learningRate()));
+  report("Test " + res.num_success + "/" + res.num_total + " sucess");
 }
 
+/// Update the epoch info + optimizer
 function MkEnumerateEpoch.update!(
   io Ref<MkCNNNetwork> nn,
   Float64 test_images[][],
   Index test_labels[]) 
 {
+  // Display the info
   this.display(nn, test_images, test_labels);
+
+  // Update the optimization learning rate
   Ref<MkCNNOptimizerInterface> opti = nn.optimizer();
   opti.learningRate(opti.learningRate()*this.decay_learning_rate);
   opti.learningRate(Math_max(0.00001, opti.learningRate()));
+  this.start = getCurrentTicks();
 }
 /*                                                 Outputs                                        */
 /**************************************************************************************************/

@@ -99,4 +99,9 @@ FABRIC_EXT_EXPORT void Bernoulli_Float32_UInt32(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::UInt32 >::IOParam res
 );
 
+// Defined at MkMNIST.kl:65:1
+FABRIC_EXT_EXPORT void ReportR(
+  Fabric::EDK::KL::Traits< Fabric::EDK::KL::String >::INParam str
+);
+
 #endif // __KL2EDK_AUTOGEN_global_functions__
