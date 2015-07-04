@@ -266,7 +266,7 @@ function MkEnumerateData.reset!() {
 
 function MkEnumerateData.display() {
   Float32 percent = 100.0 * this.batch_size * Float32(this.current_size) / Float32(this.training_size); 
-  ReportR("Train " + Index(percent) + "%");
+  ReportR("Train         : " + Index(percent) + "%");
 }
 
 function MkEnumerateData.update!() {
@@ -297,14 +297,14 @@ function MkEnumerateEpoch.display(
   Float64 test_images[][],
   Index test_labels[]) 
 {
-  report("Train 100%");
+  report("Train         : 100%");
   Float32 tim = Float32(getCurrentTicks() - this.start)/0.0166666667;
-  report("Time " + tim + " mins");
+  report("Time          : " + tim + " mins");
   
   MkCNNNetworkResult res = nn.test(test_images, test_labels);
   Ref<MkCNNOptimizerInterface> opti = nn.optimizer();
-  report("Learning rate " + Float32(opti.learningRate()));
-  report("Test " + res.num_success + "/" + res.num_total + " sucess");
+  report("Learning rate : " + Float32(opti.learningRate()));
+  report("Test          : " + res.num_success + "/" + res.num_total + " sucess");
 }
 
 /// Update the epoch info + optimizer

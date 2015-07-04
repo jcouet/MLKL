@@ -34,12 +34,12 @@ function Boolean[] CreateConnections() {
 
 function MkCNNLayerInterface[] CreateLayers() {
   MkCNNLayerInterface layers[];
-  layers.push(MkCNNLayerConvolutional(MK_NEURON_FUNC_TANH,  32, 32, 5,  1, 6));
-  layers.push(MkCNNLayerAveragePooling(MK_NEURON_FUNC_TANH, 28, 28, 6,  2));
-  layers.push(MkCNNLayerConvolutional(MK_NEURON_FUNC_TANH,  14, 14, 5,  6,  16, MkCNNConnectionTable(CreateConnections(), 6, 16)));
-  layers.push(MkCNNLayerAveragePooling(MK_NEURON_FUNC_TANH, 10, 10, 16, 2));
-  layers.push(MkCNNLayerConvolutional(MK_NEURON_FUNC_TANH,  5,  5,  5,  16, 120));
-  layers.push(MkCNNLayerFully(MK_NEURON_FUNC_TANH, 120, 10));
+  layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  32, 32, 5,  1, 6));
+  layers.push(MkCNNLayerAveragePooling(MK_NEURON_TANH, 28, 28, 6,  2));
+  layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  14, 14, 5,  6,  16, MkCNNConnectionTable(CreateConnections(), 6, 16)));
+  layers.push(MkCNNLayerAveragePooling(MK_NEURON_TANH, 10, 10, 16, 2));
+  layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  5,  5,  5,  16, 120));
+  layers.push(MkCNNLayerFully(MK_NEURON_TANH, 120, 10));
   return layers;
 }
 
@@ -62,7 +62,8 @@ operator entry() {
   MkCNNConfig config;
   MkCNNLayerInterface layers[];
 
-  config.config("layers_def.mlkl", layers);
+  if(!config.config("C:\\Users\\Julien\\Documents\\Dev\\MLKL\\app\\samples\\cnn\\cnn_config.mlkl", layers))
+    return;
 
   //layers = CreateLayers();
   MkCNNNetwork nn(config.lossFunction(), config.optimizer(), layers);

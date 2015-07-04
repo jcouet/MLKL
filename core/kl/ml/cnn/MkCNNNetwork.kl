@@ -35,11 +35,10 @@ object MkCNNNetwork {
   private String name;
   private MkCCNDefs defs;
   private MkCNNOptimizerInterface optimizer;
-  private MkCNNLossFunctionInterface loss_function;
+  private MkCNNLossInterface loss_function;
   private MkCNNLayers layers;
 };
 
-/// \internal
 /// Initilisation, called by the contructeurs and derived classes
 private MkCNNNetwork.init!(
   Index loss_function,
@@ -51,16 +50,16 @@ private MkCNNNetwork.init!(
 
   switch(loss_function)
   {
-    case MK_LOSS_FUNC_MSE:
-      this.loss_function = MkCNNLossFunctionMSE();
+    case MK_LOSS_MSE:
+      this.loss_function = MkCNNLossMSE();
     break;
     
-    case MK_LOSS_FUNC_CE:
-      this.loss_function = MkCNNLossFunctionCE();
+    case MK_LOSS_CE:
+      this.loss_function = MkCNNLossCE();
     break;
 
     default :
-      this.loss_function = MkCNNLossFunctionMSE();
+      this.loss_function = MkCNNLossMSE();
     break;
   }
 
@@ -177,7 +176,7 @@ public MkCNNNetwork.train!(
 
   for (Index i=0; i<epoch; i++) 
   {
-    report("\n--- Epoch " + Index(i+1) + " ---");
+    report("\n------------ Epoch " + Index(i+1) + " ------------\n");
     if (this.optimizer.requiresHessian())
       this.calcHessian(ins, 500);
 
@@ -345,25 +344,21 @@ public Boolean MkCNNNetwork.load!(String path) {
   }
 */
 
-/// \internal
 /// Reset the network layers weigths
 private MkCNNNetwork.initWeight!() {
   this.layers.reset();
 }
 
-/// \internal
 /// To Remove == set within the function where it's called
 private Float64 MkCNNNetwork.targetValueMin() { 
-  return Float64(this.layers.tail().activationFunction().scale().x); 
+  return Float64(this.layers.tail().neuron().scale().x); 
 }
 
-/// \internal
 /// To Remove == set within the function where it's called
 private Float64 MkCNNNetwork.targetValueMax() { 
-  return Float64(this.layers.tail().activationFunction().scale().y); 
+  return Float64(this.layers.tail().neuron().scale().y); 
 }
 
-/// \internal
 /// Convert 1D label array to 2D (image) array
 private MkCNNNetwork.label2Vector(
   Index batch_index,
@@ -388,7 +383,6 @@ private MkCNNNetwork.label2Vector(
   }
 }
 
-/// \internal
 /// Train one batch
 private MkCNNNetwork.trainOnce!(
   Index batch_index,
@@ -413,7 +407,6 @@ private MkCNNNetwork.trainOnce!(
     for (Index i = 0; i < num_tasks; i++) 
     {
       Index num = (i == (num_tasks - 1)) ? remaining : data_per_thread;
-
       for (Index j = 0; j < num; j++) 
       {
         Float64 outs[] = this.fprop(ins[batch_index + i*num + j], i); 
@@ -426,7 +419,6 @@ private MkCNNNetwork.trainOnce!(
   }
 }  
 
-/// \internal
 /// Overload, Train one batch with 1D label array
 private MkCNNNetwork.trainOnce!(
   Index batch_index,
@@ -439,24 +431,22 @@ private MkCNNNetwork.trainOnce!(
   this.trainOnce(batch_index, ins, v, size);
 } 
 
-/// \internal
 private Boolean MkCNNNetwork.isCanonicalLink(
-  Ref<MkCNNNeuronFunctionInterface> h, 
-  Ref<MkCNNLossFunctionInterface> e) 
+  Ref<MkCNNNeuronInterface> h, 
+  Ref<MkCNNLossInterface> e) 
 {  
-  if (h.mode() == MK_NEURON_FUNC_SIGMOID && e.mode() == MK_LOSS_FUNC_CE) 
+  if (h.mode() == MK_NEURON_SIGMOID && e.mode() == MK_LOSS_CE) 
     return true;
 
-  if (h.mode() == MK_NEURON_FUNC_TANH && e.mode() == MK_LOSS_FUNC_CE) 
+  if (h.mode() == MK_NEURON_TANH && e.mode() == MK_LOSS_CE) 
     return true;
 
-  if (h.mode() == MK_NEURON_FUNC_IDENTITY && e.mode() == MK_LOSS_FUNC_MSE) 
+  if (h.mode() == MK_NEURON_IDENTITY && e.mode() == MK_LOSS_MSE) 
     return true;
 
   return false;
 }
 
-/// \internal
 /// Computation of the hessian
 private MkCNNNetwork.calcHessian!(Float64 ins[][], Index size_init_hessian) {
   Index size = Math_min(ins.size(), size_init_hessian);
@@ -465,7 +455,6 @@ private MkCNNNetwork.calcHessian!(Float64 ins[][], Index size_init_hessian) {
   this.layers.divideHessian(size);
 }
 
-/// \internal
 private Float64 MkCNNNetwork.getLoss(Float64 outs[], Float64 t[]) {
   //assert(outs.size() == (Index)t.size());
   Float64 e = 0.0;
@@ -474,14 +463,12 @@ private Float64 MkCNNNetwork.getLoss(Float64 outs[], Float64 t[]) {
   return e;
 }
 
-/// \internal
 /// Forward propagation
 private Float64[] MkCNNNetwork.fprop!(Float64 ins[], Index idx) {
   if (ins.size() != this.inDim()) return ins;
   return this.layers.head().fprop(ins, idx);
 }
 
-/// \internal
 /// Backward propagetion 
 private MkCNNNetwork.bprop!(
   Float64 outs[], 
@@ -490,7 +477,7 @@ private MkCNNNetwork.bprop!(
 {
   Float64 delta[]; delta.resize(this.outDim());
   
-  Ref<MkCNNNeuronFunctionInterface> h = this.layers.tail().activationFunction();
+  Ref<MkCNNNeuronInterface> h = this.layers.tail().neuron();
   if (this.isCanonicalLink(h, this.loss_function)) 
   {
     for (Index i = 0; i < this.outDim(); i++)
@@ -505,12 +492,11 @@ private MkCNNNetwork.bprop!(
   this.layers.tail().bprop(delta, idx);
 }
 
-/// \internal
 /// 2nd Backward propagation, use for Hessian computation 
 private MkCNNNetwork.bprop2nd!(Float64 outs[]) {
   Float64 delta[]; delta.resize(this.outDim());
   
-  Ref<MkCNNNeuronFunctionInterface> h = this.layers.tail().activationFunction();
+  Ref<MkCNNNeuronInterface> h = this.layers.tail().neuron();
   if (this.isCanonicalLink(h, this.loss_function)) 
   {
     for (Index i = 0; i < this.outDim(); i++)

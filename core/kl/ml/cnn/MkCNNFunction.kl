@@ -28,11 +28,11 @@ require MLKL;
 
 /**************************************************************************************************/
 /*                                              Loss functions                                    */
-const Index MK_LOSS_FUNC_MSE = 0;
-const Index MK_LOSS_FUNC_CE = 1;
+const Index MK_LOSS_MSE = 0;
+const Index MK_LOSS_CE = 1;
  
 /// Interface for loss function 
-interface MkCNNLossFunctionInterface {
+interface MkCNNLossInterface {
   Float32 f(Float32 y, Float32 t);
   Float32 df(Float32 y, Float32 t);
   Index mode();
@@ -40,66 +40,66 @@ interface MkCNNLossFunctionInterface {
 };
 
 /// Base class for loss function 
-object MkCNNLossFunctionBase : MkCNNLossFunctionInterface {
+object MkCNNLossBase : MkCNNLossInterface {
   protected Index mode; // Mode, use to id the class
 };
 
-/// Return the current mode, either MK_LOSS_FUNC_CE or MK_LOSS_FUNC_MSE
-public Index MkCNNLossFunctionBase.mode() {
+/// Return the current mode, either MK_LOSS_CE or MK_LOSS_MSE
+public Index MkCNNLossBase.mode() {
   return this.mode;
 }
 
 /// Return the current mode as string
-public String MkCNNLossFunctionBase.modeAsStr() {
-  if(this.mode == MK_LOSS_FUNC_MSE)
-    return "MK_LOSS_FUNC_MSE";
-  else if(this.mode == MK_LOSS_FUNC_CE)
-    return "MK_LOSS_FUNC_CE";
+public String MkCNNLossBase.modeAsStr() {
+  if(this.mode == MK_LOSS_MSE)
+    return "MK_LOSS_MSE";
+  else if(this.mode == MK_LOSS_CE)
+    return "MK_LOSS_CE";
   else
-    return "MK_LOSS_FUNC_UNKNOWN";
+    return "MK_LOSS_UNKNOWN";
 }
 
 /// Return the value of the function at point x
 /// To be overload
-public Float32 MkCNNLossFunctionBase.f(Float32 y, Float32 t) {
+public Float32 MkCNNLossBase.f(Float32 y, Float32 t) {
   return 0.0;
 }
 
 /// Return the value of the function derivate point x
 /// To be overload
-public Float32 MkCNNLossFunctionBase.df(Float32 y, Float32 t) {
+public Float32 MkCNNLossBase.df(Float32 y, Float32 t) {
   return 0.0;
 }
 
 
 /// Mean Square error 
-object MkCNNLossFunctionMSE : MkCNNLossFunctionBase {};
+object MkCNNLossMSE : MkCNNLossBase {};
 
-function MkCNNLossFunctionMSE() {
-  this.mode = MK_LOSS_FUNC_MSE;
+function MkCNNLossMSE() {
+  this.mode = MK_LOSS_MSE;
 }
 
-public Float32 MkCNNLossFunctionMSE.f(Float32 y, Float32 t) {
+public Float32 MkCNNLossMSE.f(Float32 y, Float32 t) {
   return (y - t) * (y - t) / 2.0;
 }
 
-public Float32 MkCNNLossFunctionMSE.df(Float32 y, Float32 t) {
+public Float32 MkCNNLossMSE.df(Float32 y, Float32 t) {
   return y - t;
 }
 
  
 /// Cross-Entropy 
-object MkCNNLossFunctionCE : MkCNNLossFunctionBase {};
+object MkCNNLossCE : MkCNNLossBase {};
 
-function MkCNNLossFunctionCE() {
-  this.mode = MK_LOSS_FUNC_CE;
+function MkCNNLossCE() {
+  this.mode = MK_LOSS_CE;
 }
 
-public Float32 MkCNNLossFunctionCE.f(Float32 y, Float32 t) {
+public Float32 MkCNNLossCE.f(Float32 y, Float32 t) {
   return -t * log(y) - (1.0 - t) * log(1.0 - y);
 }
 
-public Float32 MkCNNLossFunctionCE.df(Float32 y, Float32 t) {
+public Float32 MkCNNLossCE.df(Float32 y, Float32 t) {
   return (y - t) / (y * (1 - y));
 }
 /*                                              Loss functions                                    */
@@ -109,13 +109,13 @@ public Float32 MkCNNLossFunctionCE.df(Float32 y, Float32 t) {
 
 /**************************************************************************************************/
 /*                                             Neuron functions                                   */
-const Index MK_NEURON_FUNC_IDENTITY = 0;
-const Index MK_NEURON_FUNC_SIGMOID = 1;
-const Index MK_NEURON_FUNC_RECTIFIEDLINEAR = 2;
-const Index MK_NEURON_FUNC_TANH = 3;
+const Index MK_NEURON_IDENTITY = 0;
+const Index MK_NEURON_SIGMOID = 1;
+const Index MK_NEURON_RECTIFIEDLINEAR = 2;
+const Index MK_NEURON_TANH = 3;
  
 /// Interface for activation function 
-interface MkCNNNeuronFunctionInterface {
+interface MkCNNNeuronInterface {
   Float64 f(Float64 x);
   Float64 df(Float64 x);
   Vec2 scale();
@@ -124,131 +124,131 @@ interface MkCNNNeuronFunctionInterface {
 };
 
 /// Base class for activation function 
-object MkCNNNeuronFunctionBase : MkCNNNeuronFunctionInterface {
+object MkCNNNeuronBase : MkCNNNeuronInterface {
   protected Index mode; // Mode
 };
 
 /// Return the current mode
-public Index MkCNNNeuronFunctionBase.mode() {
+public Index MkCNNNeuronBase.mode() {
   return this.mode;
 }
 
 /// Return the current mode as string
-public String MkCNNNeuronFunctionBase.modeAsStr() {
+public String MkCNNNeuronBase.modeAsStr() {
 
-  if(this.mode == MK_NEURON_FUNC_IDENTITY)
-    return "MK_NEURON_FUNC_IDENTITY";
+  if(this.mode == MK_NEURON_IDENTITY)
+    return "MK_NEURON_IDENTITY";
     
-  else if(this.mode == MK_NEURON_FUNC_SIGMOID)
-    return "MK_NEURON_FUNC_SIGMOID";
+  else if(this.mode == MK_NEURON_SIGMOID)
+    return "MK_NEURON_SIGMOID";
 
-  else if(this.mode == MK_NEURON_FUNC_RECTIFIEDLINEAR)
-    return "MK_NEURON_FUNC_RECTIFIEDLINEAR";
+  else if(this.mode == MK_NEURON_RECTIFIEDLINEAR)
+    return "MK_NEURON_RECTIFIEDLINEAR";
 
-  else if(this.mode == MK_NEURON_FUNC_TANH)
-    return "MK_NEURON_FUNC_TANH";
+  else if(this.mode == MK_NEURON_TANH)
+    return "MK_NEURON_TANH";
 
   else
-    return "MK_NEURON_UNKNOWN";
+    return "MK_NEURONOWN";
 }
 
 /// Return the value of the function at point x
 /// To be overload
-public Float64 MkCNNNeuronFunctionBase.f(Float64 x) {
+public Float64 MkCNNNeuronBase.f(Float64 x) {
   return 0.0;
 }
 
 /// Return the value of the function derivate point x
 /// To be overload
-public Float64 MkCNNNeuronFunctionBase.df(Float64 x) {
+public Float64 MkCNNNeuronBase.df(Float64 x) {
   return 0.0;
 }
 
 /// Return the current scale
 /// To be overload
-public Vec2 MkCNNNeuronFunctionBase.scale() {
+public Vec2 MkCNNNeuronBase.scale() {
   return Vec2(1.0, 1.0);
 }
 
 
 /// Identity 
-object MkCNNNeuronFunctionIdentity : MkCNNNeuronFunctionBase {};
+object MkCNNNeuronIdentity : MkCNNNeuronBase {};
 
-function MkCNNNeuronFunctionIdentity() {
-  this.mode = MK_NEURON_FUNC_IDENTITY;
+function MkCNNNeuronIdentity() {
+  this.mode = MK_NEURON_IDENTITY;
 }
 
-public Float64 MkCNNNeuronFunctionIdentity.f(Float64 x) {
+public Float64 MkCNNNeuronIdentity.f(Float64 x) {
   return x;
 }
 
-public Float64 MkCNNNeuronFunctionIdentity.df(Float64 x) {
+public Float64 MkCNNNeuronIdentity.df(Float64 x) {
   return 1;
 }
 
-public Vec2 MkCNNNeuronFunctionIdentity.scale() {
+public Vec2 MkCNNNeuronIdentity.scale() {
   return Vec2(0.1, 0.9);
 }
 
 
 /// Sigmoid
-object MkCNNNeuronFunctionSigmoid : MkCNNNeuronFunctionBase {};
+object MkCNNNeuronSigmoid : MkCNNNeuronBase {};
 
-function MkCNNNeuronFunctionSigmoid() {
-  this.mode = MK_NEURON_FUNC_SIGMOID;
+function MkCNNNeuronSigmoid() {
+  this.mode = MK_NEURON_SIGMOID;
 }
 
-public Float64 MkCNNNeuronFunctionSigmoid.f(Float64 x) {
+public Float64 MkCNNNeuronSigmoid.f(Float64 x) {
   return 1.0 / (1.0 + exp(-x));
 }
 
-public Float64 MkCNNNeuronFunctionSigmoid.df(Float64 x) {
+public Float64 MkCNNNeuronSigmoid.df(Float64 x) {
   return x * (1.0 - x);
 }
 
-public Vec2 MkCNNNeuronFunctionSigmoid.scale() {
+public Vec2 MkCNNNeuronSigmoid.scale() {
   return Vec2(0.1, 0.9);
 }
 
 
 /// Linear
-object MkCNNNeuronFunctionRectifiedLinear : MkCNNNeuronFunctionBase {};
+object MkCNNNeuronRectifiedLinear : MkCNNNeuronBase {};
 
-function MkCNNNeuronFunctionRectifiedLinear() {
-  this.mode = MK_NEURON_FUNC_RECTIFIEDLINEAR;
+function MkCNNNeuronRectifiedLinear() {
+  this.mode = MK_NEURON_RECTIFIEDLINEAR;
 }
 
-public Float64 MkCNNNeuronFunctionRectifiedLinear.f(Float64 x) {
+public Float64 MkCNNNeuronRectifiedLinear.f(Float64 x) {
   return Math_max(0.0, x); 
 }
 
-public Float64 MkCNNNeuronFunctionRectifiedLinear.df(Float64 x) {
+public Float64 MkCNNNeuronRectifiedLinear.df(Float64 x) {
   return (x > 0.0) ? 1.0 : 0.0;
 }
 
-public Vec2 MkCNNNeuronFunctionRectifiedLinear.scale() {
+public Vec2 MkCNNNeuronRectifiedLinear.scale() {
   return Vec2(0.1, 0.9);
 }
 
 
 /// Tangeante hyperbolic
-object MkCNNNeuronFunctionTanH : MkCNNNeuronFunctionBase {};
+object MkCNNNeuronTanH : MkCNNNeuronBase {};
 
-function MkCNNNeuronFunctionTanH() {
-  this.mode = MK_NEURON_FUNC_TANH;
+function MkCNNNeuronTanH() {
+  this.mode = MK_NEURON_TANH;
 }
 
-public Float64 MkCNNNeuronFunctionTanH.f(Float64 x) {
+public Float64 MkCNNNeuronTanH.f(Float64 x) {
   Float64 ep = exp(x);
   Float64 em = exp(-x); 
   return (ep - em) / (ep + em);
 }
 
-public Float64 MkCNNNeuronFunctionTanH.df(Float64 x) {
+public Float64 MkCNNNeuronTanH.df(Float64 x) {
   return 1.0 - x * x;
 }
 
-public Vec2 MkCNNNeuronFunctionTanH.scale() {
+public Vec2 MkCNNNeuronTanH.scale() {
   return Vec2(-0.8, 0.8);
 }
 /*                                             Neuron functions                                   */
