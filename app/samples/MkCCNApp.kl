@@ -61,8 +61,9 @@ operator entry() {
   
   MkCNNConfig config;
   MkCNNLayerInterface layers[];
-
-  if(!config.config("C:\\Users\\Julien\\Documents\\Dev\\MLKL\\app\\samples\\cnn\\cnn_config.mlkl", layers))
+  String path_config = "C:\\Users\\Julien\\Documents\\Dev\\MLKL\\app\\samples\\cnn\\cnn_config.mlkl";
+  
+  if(!config.config(path_config, layers))
     return;
 
   //layers = CreateLayers();
@@ -82,8 +83,7 @@ operator entry() {
   MkEnumerateData on_batch_enumerate(train_images.size(), config.batch_size); 
   
   // Train the network
-  nn.train( train_images, train_labels, test_images, test_labels,
-            config.batch_size, config.nb_epoch, 
+  nn.train( config, train_images, train_labels, test_images, test_labels,
             on_epoch_enumerate, on_batch_enumerate);
 
   // Finally test it and save it

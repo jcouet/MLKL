@@ -18,8 +18,8 @@ filters=32
 filterSize=5
 inChannels=1
 outChannels=6
-initW=-1
-initB=-1
+initW=0.1
+initB=0.5
 
 [pool1]
 type=pool
@@ -28,8 +28,8 @@ neuron=tanh
 filters=28
 inChannels=6
 poolingSize=2
-initW=-1
-initB=-1
+initW=0.1
+initB=0.5
 
 [conv2]
 type=conv
@@ -38,8 +38,8 @@ filters=14
 filterSize=5
 inChannels=6
 outChannels=16
-initW=-1
-initB=-1
+initW=0.1
+initB=0.5
 
 [pool2]
 type=pool
@@ -48,8 +48,8 @@ neuron=tanh
 filters=10
 inChannels=16
 poolingSize=2
-initW=-1
-initB=-1
+initW=0.1
+initB=0.5
 
 [conv3]
 type=conv
@@ -58,14 +58,14 @@ filters=5
 filterSize=5
 inChannels=16
 outChannels=120
-initW=-1
-initB=-1
+initW=0.1
+initB=0.5
 
 [fc3]
 type=fc
 neuron=tanh
 inChannels=120
 outChannels=10
-initW=-1
-initB=-1
+initW=0.1
+initB=0.5
 

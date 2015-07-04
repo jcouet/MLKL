@@ -8,19 +8,21 @@
 /*                                                                                                */
 /**************************************************************************************************/
 
-#include <MkMNIST.h>
-#include <iostream>
 #include <vector>
-#include <fstream>
-#include <algorithm>  
-#include <vector>
-#include <functional>
 #include <random>
-#include <type_traits>
 #include <limits>
-#include <FabricEDK.h>
-
+#include <time.h>
+#include <string>
+#include <stdio.h>
+#include <fstream>
+#include <iostream>
+#include <algorithm>  
+#include <functional>
+#include <type_traits>
 using namespace std;
+
+#include <MkMNIST.h>
+#include <FabricEDK.h>
 using namespace Fabric::EDK;
 
 IMPLEMENT_FABRIC_EDK_ENTRIES( MkMNIST )
@@ -272,4 +274,14 @@ FABRIC_EXT_EXPORT void Bernoulli_Float32_UInt32(
 
 FABRIC_EXT_EXPORT void ReportR(KL::Traits< KL::String >::INParam str) {
   cerr << string(str.data()) << "\r";
+}
+
+// Get current date/time, format is YYYY-MM-DD.HH:mm:ss
+FABRIC_EXT_EXPORT void CurrentDateTime(KL::Traits< KL::String >::IOParam str) {
+  time_t now = time(0);
+  struct tm tstruct;
+  char buf[80];
+  tstruct = *localtime(&now);
+  strftime(buf, sizeof(buf), "%Y-%m-%d_%H-%M-%S", &tstruct);
+  str = KL::String(string(buf).c_str());
 }

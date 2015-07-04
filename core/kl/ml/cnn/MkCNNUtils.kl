@@ -298,13 +298,14 @@ function MkEnumerateEpoch.display(
   Index test_labels[]) 
 {
   report("Train         : 100%");
-  Float32 tim = Float32(getCurrentTicks() - this.start)/0.0166666667;
+  Float32 tim = Float32(getSecondsBetweenTicks(this.start, getCurrentTicks())/60.0);
   report("Time          : " + tim + " mins");
   
   MkCNNNetworkResult res = nn.test(test_images, test_labels);
   Ref<MkCNNOptimizerInterface> opti = nn.optimizer();
   report("Learning rate : " + Float32(opti.learningRate()));
-  report("Test          : " + res.num_success + "/" + res.num_total + " sucess");
+  Float32 succes = 100.0*Float32(res.num_success)/Float32(res.num_total);
+  report("Test          : " + succes + "% succes");
 }
 
 /// Update the epoch info + optimizer

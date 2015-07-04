@@ -40,6 +40,7 @@ const Index MK_LAYER_DROPOUT = 7;
 /// Interface of all kind of NN layers
 interface MkCNNLayerInterface {
   display();
+  String name();
   Index mode();
   String modeAsStr();
 	Index inSize();
@@ -47,6 +48,10 @@ interface MkCNNLayerInterface {
 	Index paramSize();
 	Index fanInSize() ;
 	Index connectionSize();
+  Float64[] weights();
+  Float64[] bias();
+  weights!(Float64 w[]);
+  bias!(Float64 b[]);
   Float64[] output(Index index);
   Boolean connect!(io MkCNNLayerInterface tail);
   initWeight!();
@@ -61,8 +66,6 @@ interface MkCNNLayerInterface {
   Float64[] fprop!(Float64 ins[], Index index);
   Float64[] bprop!(Float64 current_delta[], Index index);
   Float64[] bprop2nd!(Float64 current_delta2[]);
-  Boolean save(io TextWriter writer);
-  Boolean load!(io TextReader reader);
 };
 
 /// Base class of all kind of NN layers
@@ -78,7 +81,7 @@ object MkCNNLayerBase : MkCNNLayerInterface {
   protected Float64 b[];                    // Bias vector
   protected Float64 dw[][];                 // Difference of weight vector
   protected Float64 db[][];                 // Difference of bias vector
-  protected Float64 w_hessian[];            // Diagonal terms of the wieght hessian matrix 
+  protected Float64 w_hessian[];            // Diagonal terms of the weight hessian matrix 
   protected Float64 b_hessian[];            // Diagonal terms of the bias hessian matrix 
   protected Float64 output[][];             // Last output of current layer, set by fprop
   protected Float64 prev_delta[][];         // Last delta of previous layer, set by bprop
@@ -255,12 +258,32 @@ public Index MkCNNLayerBase.connectionSize() {
   return 0;
 }
 
+/// Return the weights
+public Float64[] MkCNNLayerBase.weights() {
+  return this.w;
+}
+
+/// Return the bias
+public Float64[] MkCNNLayerBase.bias() {
+  return this.b;
+}
+
+/// Set the weights
+public MkCNNLayerBase.weights!(Float64 w[]) {
+  this.w = w;
+}
+
+/// Set the bias
+public MkCNNLayerBase.bias!(Float64 b[]) {
+  this.b = b;
+}
+
 /// Return a the layer's output at a given worker_index
 protected Float64[] MkCNNLayerBase.output(Index index) { 
 	return this.output[index]; 
 }
 
-/// Check if this and other layers have same weigth to a given precision eps
+/// Check if this and other layers have same weights to a given precision eps
 public Boolean MkCNNLayerBase.hasSameWeights(Ref<MkCNNLayerBase> other, Float64 eps) {
   if (this.w.size() != other.w.size() || this.b.size() != other.b.size())
     return false;
@@ -392,20 +415,6 @@ public Float64[] MkCNNLayerBase.bprop!(Float64 current_delta[], Index index) {
 public Float64[] MkCNNLayerBase.bprop2nd!(Float64 current_delta2[]) {
   return current_delta2;
 }
-
-/// Save the layer weights
-public Boolean MkCNNLayerBase.save(io TextWriter writer) {
-  writer.writeLine("\n" + this.modeAsStr());
-  writer.writeLine(this.w);
-  writer.writeLine(this.b);
-  return true;
-}
-
-/// load the layer weights
-public Boolean MkCNNLayerBase.load!(io TextReader reader) {
-
-  return true;
-}
 /*                                                  Layer                                         */
 /**************************************************************************************************/
 
@@ -413,17 +422,17 @@ public Boolean MkCNNLayerBase.load!(io TextReader reader) {
 
 /**************************************************************************************************/
 /*                                                Input Layer                                     */
-/// Class for input layer 
-object MkCNNLayerInput : MkCNNLayerBase {};
+/// Class for data layer 
+object MkCNNLayerData : MkCNNLayerBase {};
 
 /// Constructor
-public MkCNNLayerInput() {
+public MkCNNLayerData() {
   this.init("", MK_NEURON_IDENTITY, 0, 0, 0, 0, -1.0, -1.0);
   this.mode = MK_LAYER_INPUT;
 }
 
 /// Constructor
-public MkCNNLayerInput(
+public MkCNNLayerData(
   String name, 
   Float64 init_w, 
   Float64 init_b) 
@@ -433,32 +442,32 @@ public MkCNNLayerInput(
 }
 
 /// Return the number of layer inputs
-public Index MkCNNLayerInput.inSize() {
+public Index MkCNNLayerData.inSize() {
   return (this.next() != null) ? this.next().inSize(): 0;
 }
 
 /// Return the number of layer connections
-public Index MkCNNLayerInput.connectionSize() { 
+public Index MkCNNLayerData.connectionSize() { 
   return this.inSize;
 }
 
-public Index MkCNNLayerInput.fanInSize() {
+public Index MkCNNLayerData.fanInSize() {
   return 1;
 }
 
 /// Forward propagation
-public Float64[] MkCNNLayerInput.fprop!(Float64 ins[], Index index) {
+public Float64[] MkCNNLayerData.fprop!(Float64 ins[], Index index) {
   this.output[index] = ins;
   return (this.next()!= null) ? this.next().fprop(ins, index) : this.output[index];
 }
 
 /// Backward propagetion 
-public Float64[] MkCNNLayerInput.bprop!(Float64 current_delta[], Index index) {
+public Float64[] MkCNNLayerData.bprop!(Float64 current_delta[], Index index) {
   return current_delta;
 }
 
 /// 2nd Backward propagetion 
-public Float64[] MkCNNLayerInput.bprop2nd!(Float64 current_delta2[]) {
+public Float64[] MkCNNLayerData.bprop2nd!(Float64 current_delta2[]) {
   return current_delta2;
 }
 /*                                                Input Layer                                     */
@@ -700,7 +709,7 @@ private MkCNNLayers.construct!(io MkCNNLayers rhs) {
 
 /// Constructor
 public MkCNNLayers() {
-  this.first = MkCNNLayerInput();
+  this.first = MkCNNLayerData("[data]", -1.0, -1.0);
   this.add(this.first);
 }
 
@@ -719,7 +728,12 @@ public MkCNNLayers.add!(io MkCNNLayerInterface new_tail) {
 
 /// Check if there is any layer
 public Boolean MkCNNLayers.empty() {
-  return (this.layers.size() == 0);
+  return (this.size() == 0);
+}
+
+/// Return the number of layers 
+public Index MkCNNLayers.size() {
+  return this.layers.size();
 }
 
 /// Return the reference to the first layer
@@ -734,8 +748,14 @@ public Ref<MkCNNLayerInterface> MkCNNLayers.tail() {
   else return this.layers[this.layers.size() - 1];
 }
 
+/// Return the reference to the layer at index
+public Ref<MkCNNLayerInterface> MkCNNLayers.at(Index index) {
+  if(this.empty() || (index < 0) || (index >= this.layers.size()) ) return null;
+  else return this.layers[index];
+}
+
 /// Reset all the layers weights
-public MkCNNLayers.reset!() {
+public MkCNNLayers.initWeight!() {
   for(Index l=0; l<this.layers.size(); ++l)
     this.layers[l].initWeight();
 }
@@ -754,23 +774,6 @@ public MkCNNLayers.updateWeights!(
 public MkCNNLayers.divideHessian!(Index denominator) {
   for(Index l=0; l<this.layers.size(); ++l)
     this.layers[l].divideHessian(denominator);
-}
-
-/// Save the layers
-public Boolean MkCNNLayers.save(io TextWriter writer) {
-
-  // Save the layers weights, append
-  for(Index l=0; l<this.layers.size(); ++l)
-    if(!this.layers[l].save(writer))
-      return false;
-  
-  return true;
-}
-
-/// Load the layers
-public Boolean MkCNNLayers.load!(String path) {
-
-  return true;
 }
 /*                                          Layers (Stack of Layer)                               */
 /**************************************************************************************************/
