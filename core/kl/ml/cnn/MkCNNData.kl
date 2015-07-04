@@ -1,0 +1,63 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require MLKL, MkMNIST;
+require FileIO, Util, OpenImageIO;
+ 
+/**
+  The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
+  It provides access to the higher level reader objects such as the AlembicXformReader.
+  \example
+
+  require MLKL;
+
+  operator entry() {}
+
+  \endexample
+*/
+
+struct MkCNNTrainingData() {
+  Index train_labels[];
+  Index test_labels[];
+  Float64 train_images[][];
+  Float64 test_images[][];
+}
+
+/**************************************************************************************************/
+/*                                               MNIST                                      */
+public MkCNNTrainingData LoadTrainingData_MNIST(MkCNNConfig config) {
+  MkMNIST mnist();
+  MkCNNTrainingData data;
+  data.train_images = mnist.parseImages(config.train_images_path, -1.0, 1.0, 2, 2);
+  data.test_images = mnist.parseImages(config.test_images_path, -1.0, 1.0, 2, 2);
+  data.train_labels = mnist.parseLabels(config.train_labels_path);
+  data.test_labels = mnist.parseLabels(config.test_labels_path); 
+  return data;
+}
+/*                                                   MNIST                                        */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                                SIFFAR                                      */
+
+
+/*                                                SIFFAR                                      */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                                  General                                       */
+
+
+/*                                                  General                                       */
+/**************************************************************************************************/

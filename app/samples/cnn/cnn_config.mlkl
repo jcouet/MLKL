@@ -2,6 +2,9 @@
 # this is comment
 
 # Network configuration
+# auto_saving=1 # to save at each epoch
+# tool=train #to train the netweork, tool=predict to get output from network
+
 worker=1
 gpu=0
 nbEpoch=5

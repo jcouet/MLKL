@@ -9,3 +9,112 @@
 /**************************************************************************************************/
 
 require MLKL; 
+
+function Boolean[] CreateConnections() {
+  Boolean O = true;
+  Boolean X = false;
+
+  Boolean c[]; 
+  c.push(O); c.push(X); c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(X);  
+  c.push(X); c.push(O); c.push(O); c.push(O); c.push(O); c.push(X); c.push(O); c.push(O);  
+  c.push(O); c.push(O); c.push(X); c.push(X); c.push(X); c.push(O); c.push(O); c.push(O);  
+  c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(O); c.push(X); c.push(O);  
+  c.push(O); c.push(O); c.push(O); c.push(X); c.push(X); c.push(X); c.push(O); c.push(O);  
+  c.push(O); c.push(X); c.push(X); c.push(O); c.push(X); c.push(O); c.push(O); c.push(O);  
+  c.push(X); c.push(O); c.push(O); c.push(O); c.push(X); c.push(X); c.push(O); c.push(O);  
+  c.push(O); c.push(O); c.push(X); c.push(X); c.push(O); c.push(X); c.push(O); c.push(O);  
+  c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(X); c.push(X); c.push(O);  
+  c.push(O); c.push(O); c.push(O); c.push(X); c.push(O); c.push(O); c.push(X); c.push(O);  
+  c.push(X); c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(X); c.push(X);  
+  c.push(O); c.push(O); c.push(O); c.push(O); c.push(X); c.push(O); c.push(O); c.push(O);  
+  return c;
+}
+
+function MkCNNLayerInterface[] CreateLayers() {
+  MkCNNLayerInterface layers[];
+  layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  32, 32, 5,  1, 6));
+  layers.push(MkCNNLayerAveragePooling(MK_NEURON_TANH, 28, 28, 6,  2));
+  layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  14, 14, 5,  6,  16, MkCNNConnectionTable(CreateConnections(), 6, 16)));
+  layers.push(MkCNNLayerAveragePooling(MK_NEURON_TANH, 10, 10, 16, 2));
+  layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  5,  5,  5,  16, 120));
+  layers.push(MkCNNLayerFully(MK_NEURON_TANH, 120, 10));
+  return layers;
+}
+
+function LoadMNIST(
+  MkCNNConfig config,
+  io Float64 train_images[][],
+  io Float64 test_images[][],
+  io Index train_labels[],
+  io Index test_labels[]) 
+{
+  MkMNIST mnist();
+  train_images = mnist.parseImages(config.train_images_path, -1.0, 1.0, 2, 2);
+  test_images = mnist.parseImages(config.test_images_path, -1.0, 1.0, 2, 2);
+  train_labels = mnist.parseLabels(config.train_labels_path);
+  test_labels = mnist.parseLabels(config.test_labels_path); 
+}
+
+function Float64[] LoadImage(
+  String path, 
+  Float64 minv,
+  Float64 maxv) 
+{
+  OpenImageInput img(path);
+  OpenImageSpec spec = img.spec();
+  OpenImageTypeDesc desc = OpenImageTypeDesc(OpenImage_BASETYPE_UINT8, OpenImage_AGGREGATE_SCALAR, OpenImage_VECSEMANTICS_NOXFORM);
+
+  Byte bytes[];
+  bytes.resize(spec.get_full_width() * spec.get_full_height() * spec.get_nchannels());
+  
+  Data data = bytes.data();
+  img.read_image(desc, data, 0, 0, 0);
+
+  // mnist dataset is "white on black", so negate required
+  Float64 image_data[];
+  image_data.resize(spec.get_full_width() * spec.get_full_height());
+
+  // Normalize the iamge between 0 and 1
+  for(Index i=0; i<spec.get_full_width() * spec.get_full_height(); ++i)
+  {
+    Float64 color = Float64(bytes[3*i]);
+    color = (255 - color) * (maxv - minv) / 255.0 + minv;
+    report(color);
+  }
+
+  return image_data;
+}
+
+operator entry() {
+
+  // Load the data
+  Index train_labels[], test_labels[];
+  Float64 train_images[][], test_images[][];
+  LoadMNIST(config, train_images, test_images, train_labels, test_labels);
+
+  // Configure the network layers
+  MkCNNConfig config;
+  MkCNNLayerInterface layers = CreateLayers();
+ 
+  // Create the network
+  MkCNNNetwork nn(config.lossFunction(), config.optimizer(), layers);
+ 
+  // Set the initiale learning rate
+  Ref<MkCNNOptimizerInterface> opti = nn.optimizer();
+  nn.optimizer().learningRate(nn.optimizer().learningRate()* sqrt(config.batch_size));
+
+  // Declare the enumeration
+  // Here we could sate the larning rate decay
+  MkEnumerateEpoch on_epoch_enumerate(); 
+  MkEnumerateData on_batch_enumerate(train_images.size(), config.batch_size); 
+  
+  // Train the network
+  nn.train( config, train_images, train_labels, test_images, test_labels,
+            on_epoch_enumerate, on_batch_enumerate);
+
+
+  // Finally test it  
+  String path_image = 'C:/Users/Julien/Documents/Dev/MLKL/data/mnist/4.bmp';
+  Float64 image_data[] = LoadImage(path_image, -1.0, 1.0);
+}
+

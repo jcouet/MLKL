@@ -160,41 +160,38 @@ public MkCNNNetwork.add!(io MkCNNLayerInterface layers[]) {
 
 /// Train the network
 public MkCNNNetwork.train!(
-  MkCNNConfig config,
-  Float64 ins[][], 
-  Index t[], 
-  Float64 test_ins[][], 
-  Index test_t[],
-  io MkEnumerateEpoch on_epoch_enumerate,
-  io MkEnumerateData on_batch_enumerate)
+  MkCNNTrainingData data,
+  io MkCNNConfig config,
+  io MkEnumerateEpoch on_epoch_enumerate)
 {
-  this.layers.initWeight();
+  String path_loading = "C:/Users/Julien/Documents/Dev/MLKL/data/2015-07-04_18-25-59/res.mlkl";
+  report("\n\n\n\n-------------------- Training --------------------");
+  
   this.optimizer.reset();
-
-
-  String path_loading = "C:/Users/Julien/Documents/Dev/MLKL/data/2015-07-04_13-37-05/res.mlkl";
+  this.layers.initWeight();
   if(!config.load(path_loading, this.layers))
     return;
 
-  report("\n\n\n\n-------------------- Training --------------------");
+  MkEnumerateData on_batch_enumerate(data.train_images.size(), config.batch_size); 
   for (Index i=0; i<config.epoch(); i++) 
   {
     report("\n------------ Epoch " + Index(i+1) + "/" + config.epoch() + " ------------\n");
     if (this.optimizer.requiresHessian())
-      this.calcHessian(ins, 500);
+      this.calcHessian(data.train_images, 500);
 
     on_batch_enumerate.reset();
-    for (Index j=0; j<ins.size(); j+=config.batchSize()) 
+    for (Index j=0; j<data.train_images.size(); j+=config.batchSize()) 
     {
-      this.trainOnce(j, ins, t, Math_min(config.batchSize(), ins.size() - j));
+      this.trainOnce(j, data.train_images, data.test_labels, 
+        Math_min(config.batchSize(), data.train_images.size() - j));
       on_batch_enumerate.update();
     }
-    on_epoch_enumerate.update(this, test_ins, test_t);
+    on_epoch_enumerate.update(this, data.test_images, data.test_labels);
     config.save(this.layers);
   }
 }
 
-/// Predict the network, use while training
+/// Return the prediction of the input
 public Float64[] MkCNNNetwork.predict!(Float64 ins[]) {
   return this.fprop(ins, 0);
 }
@@ -212,6 +209,10 @@ public MkCNNNetworkResult MkCNNNetwork.test!(Float64 ins[][], Index t[]) {
     //test_result.confusion_matrix[predicted][actual]+=1.0;
   }
   return test_result;
+}
+
+public MkCNNNetwork.save() {
+
 }
 
 /*

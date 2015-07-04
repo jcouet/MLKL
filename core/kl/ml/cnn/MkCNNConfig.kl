@@ -557,7 +557,7 @@ private Boolean MkCNNConfig.parse!(String config_path) {
 }
 
 /// To-Do
-/// Check if the layers input / output size of correct
+/// Check if the layers inputs and Zoutputs sizes are correct
 private Boolean MkCNNConfig.check(io MkCNNLayerInterface layers[]) {
   return true;
 }
@@ -632,20 +632,45 @@ public Boolean MkCNNConfig.save(MkCNNLayers layers) {
   return writer.close();
 }
 
-/// Load a layer
+/// Load a layer weigths
 private Boolean MkCNNConfig.load(
   String name,
   io TextReader reader, 
   io Ref<MkCNNLayerInterface> layer) 
 {
-  report("name " + name);
-  report("layer.name " + layer.name());
-  //String line = reader.readLine();
+  String line = reader.readLine();
+  if(line.find("mode=") > -1) {
+    line = reader.readLine();
+  }
+
+  if(line.find("w=") > -1) {
+    String data = ParseStr("w=", line); 
+    data = data.subString(1, data.length()-2);
+    String datas[] = data.split(",");
+
+    Float64 w[]; w.resize(datas.size());
+    for(Index i=0; i<w.size(); ++i)
+      w[i] = Float64(datas[i].toScalar());
+    layer.weights(w);
+    line = reader.readLine();
+  }
+
+  if(line.find("b=") > -1) {
+    String data = ParseStr("b=", line); 
+    data = data.subString(1, data.length()-2);
+    String datas[] = data.split(",");
+
+    Float64 b[]; b.resize(datas.size());
+    for(Index i=0; i<b.size(); ++i)
+      b[i] = Float64(datas[i].toScalar());
+    layer.bias(b);
+  }
+
   return true;
 }
 
 /// Load the current network's layers
-/// Has to be used after configuration
+/// Has to be used after configuring the network
 public Boolean MkCNNConfig.load(String path, io MkCNNLayers layers) {
   TextReader reader();
   if(!reader.open(path))
@@ -684,8 +709,6 @@ public Boolean MkCNNConfig.load(String path, io MkCNNLayers layers) {
       }
     }
   }
-
-  report("I am loading");
   return reader.close();
 }
 /*                                              Loss functions                                    */

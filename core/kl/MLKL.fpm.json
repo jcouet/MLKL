@@ -9,6 +9,7 @@
     "ml/svm/MkSVMSMO.kl",
     "ml/svm/MkSVMMultiClass.kl",
 
+    "ml/cnn/MkCNNData.kl",
     "ml/cnn/MkCNNUtils.kl",
     "ml/cnn/MkCNNFunction.kl",
     "ml/cnn/MkCNNDropout.kl",
