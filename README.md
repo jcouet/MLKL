@@ -1,6 +1,6 @@
 # MLKL
 
-- MLKL is a machine learning framework written in [kl](http://fabricengine.com/) used to automaticaally calssify images. 
+- MLKL is a machine learning framework written in [kl](http://fabricengine.com/) used to automaticaally classify images. 
 - It supports two differents frameworks :
 	* [MkSVM : Support vector machine](#MkSVM-framework)
 	* [MkCNN : Deep learning](#MkCNN-framework)
@@ -22,9 +22,9 @@
 
 #### Features
 - Layers : Fully-connected, Dropout, Convolutional, Pooling (average and max)
-- Neurons : tanh, sigmoid, softmax, rectified linear, identity
-- Loss functions : cross entropy, mean squared error
-- Optimization : stochastic gradient descent, stochastic gradient levenberg marquardt, adagrad, rmsprop
+- Neurons : TanH, Sigmoid, Softmax, Rectified linear, Identity
+- Loss functions : Cross entropy, Mean squared error
+- Optimization : Stochastic gradient, Stochastic levenberg marquardt, AdaGrad, RmsProp
 
 
 #### Sample project
