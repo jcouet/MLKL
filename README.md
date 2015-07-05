@@ -1,30 +1,32 @@
 # MLKL
-A machine learning framework in KL
 
-========
+- MLKL is a machine learning framework written in [kl](http://fabricengine.com/) used to automaticaally calssify images. 
+- It supports two differents frameworks :
+* [MkSVM : Support vector machine](#MkSVM-framework)
+* [MkCNN : Deep learning](#MkCNN-framework)
+- It purpose is to provide efficient parallel implementations that can run both on CPU and GPU (AMD or CUDA). At the moment, only CPU parallelism is supported but GPU will come soon.
+- For now, the implementation works with the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset only. In the futur, more tests will be performed with the [CIFAR](http://www.cs.toronto.edu/~kriz/cifar.html) dataset. Furthemore, code will be released soon to convert images of any format to the right format for the network.
 
-MLKL is a machine learning framework writtin in [kl](http://fabricengine.com/). It supports two differents machine learning-frameworks :
-* [Support vector machine MkSVM](#MkSVM-framework)
-* [Depp learning MkCNN](#MkCNN-framework)
 
 
 ## MkSVM framework
-- 
-- It's still under developement
+- MkSVM is inspired of [Accord](http://accord-framework.net/)
+- It's still under developement, not fully tested
  
+
+
+
 ## MkCNN framework
--MLKL has a KL implementation of [tiny-cnn](https://github.com/nyanp/tiny-cnn/wiki), a convoluional neural network) implemented in C++11.
--It purpose is to provide a more efficient that can run both on CPU and GPU.
+- MkCNN is a KL implementation of a convolutional neural network.
+- MkCNN is inspired of both [tiny-cnn](https://github.com/nyanp/tiny-cnn/wiki), a convoluional neural network implemented in C++11 and [Convnet](https://code.google.com/p/cuda-convnet/).
 
-### supported networks
-#### layer-types
-* fully-connected layer
-* fully-connected layer with dropout
-* convolutional layer
-* average pooling layer
-* max-pooling layer
+#### Layers
+* Fully-connected
+* Dropout
+* Convolutional
+* Pooling (average and max)
 
-#### activation functions
+#### Neurons
 * tanh
 * sigmoid
 * softmax
@@ -36,13 +38,16 @@ MLKL is a machine learning framework writtin in [kl](http://fabricengine.com/). 
 * cross-entropy
 * mean-squared-error
 
-#### optimization algorithm
-* stochastic gradient descent (with/without L2 normalization and momentum)
+#### Optimization
+* stochastic gradient descent
 * stochastic gradient levenberg marquardt
 * adagrad
 * rmsprop
 
-### dependencies
-#### requirements
-FabricEngine, scons and a C++ compiler
+
+#### Sample project
+* Requires [FabricEngine](http://fabricengine.com/get-fabric/), [scons](http://www.scons.org/) and a C++ compiler.
+* Compile the C++ MNIST using scons
+* Configure the network
+* Launch the sample project
  

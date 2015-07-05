@@ -4,6 +4,30 @@
 		"selected_items":
 		[
 			[
+				"we",
+				"weigths"
+			],
+			[
+				"Prse",
+				"ParseStr"
+			],
+			[
+				"file",
+				"file_path"
+			],
+			[
+				"ou",
+				"output_dir_path"
+			],
+			[
+				"wi",
+				"wieght"
+			],
+			[
+				"pool",
+				"pooling_size"
+			],
+			[
 				"rea",
 				"readLine"
 			],
@@ -14,10 +38,6 @@
 			[
 				"MkA",
 				"MkCNNActivationFunctionInterface"
-			],
-			[
-				"ou",
-				"out2in_"
 			],
 			[
 				"out_s",
@@ -48,50 +68,91 @@
 	"buffers":
 	[
 		{
-			"file": "core/kl/ml/cnn/MkCNNLayer.kl",
-			"settings":
-			{
-				"buffer_size": 22693,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "core/kl/ml/cnn/MkCNNDropout.kl",
-			"settings":
-			{
-				"buffer_size": 5762,
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "app/samples/MkCCNApp.kl",
-			"settings":
-			{
-				"buffer_size": 4341,
-				"line_ending": "Windows"
-			}
-		},
-		{
 			"file": "core/kl/ml/cnn/MkCNNNetwork.kl",
 			"settings":
 			{
-				"buffer_size": 13550,
+				"buffer_size": 13026,
 				"line_ending": "Windows"
 			}
 		},
 		{
-			"file": "core/kl/ml/cnn/MkCNNLayerPartial.kl",
+			"file": "app/samples/cnn/cnn_config.mlkl",
 			"settings":
 			{
-				"buffer_size": 18531,
+				"buffer_size": 900,
 				"line_ending": "Windows"
 			}
 		},
 		{
-			"file": "core/kl/ml/cnn/MkCNNLayerFully.kl",
+			"file": "samples/tiny-cnn-master/include/network.h",
 			"settings":
 			{
-				"buffer_size": 7400,
+				"buffer_size": 15503,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "# MLKL\n\n- MLKL is a machine learning framework written in [kl](http://fabricengine.com/) used to automaticaally calssify images. \n- It supports two differents frameworks :\n* [MkSVM : Support vector machine](#MkSVM-framework)\n* [MkCNN : Deep learning](#MkCNN-framework)\n- It purpose is to provide efficient parallel implementations that can run both on CPU and GPU (AMD or CUDA). At the moment, only CPU parallelism is supported but GPU will come soon.\n- For now, the implementation works with the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset only. In the futur, more tests will be performed with the [CIFAR](http://www.cs.toronto.edu/~kriz/cifar.html) dataset. Furthemore, code will be released soon to convert images of any format to the right format for the network.\n\n\n## MkSVM framework\n- MkSVM is based on [Accord](http://accord-framework.net/)\n- It's still under developement, not fully tested\n \n## MkCNN framework\n- MkCNN is a KL implementation of a convolutional neural network.\n- MkCNN is based on both [tiny-cnn](https://github.com/nyanp/tiny-cnn/wiki), a convoluional neural network implemented in C++11 and [Convnet]().\n\n#### Layers\n* Fully-connected\n* Dropout\n* Convolutional\n* Pooling (average and max)\n\n#### Neurons\n* tanh\n* sigmoid\n* softmax\n* rectified linear(relu)\n* leaky relu\n* identity\n\n#### loss functions\n* cross-entropy\n* mean-squared-error\n\n#### Optimization\n* stochastic gradient descent\n* stochastic gradient levenberg marquardt\n* adagrad\n* rmsprop\n\n#### dependencies\n##### requirements\nFabricEngine, scons and a C++ compiler\n ",
+			"file": "README.md",
+			"file_size": 1599,
+			"file_write_time": 130805285224663898,
+			"settings":
+			{
+				"buffer_size": 1559,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "samples/tiny-cnn-master/README.md",
+			"settings":
+			{
+				"buffer_size": 5298,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "core/kl/ml/cnn/MkCNNData.kl",
+			"settings":
+			{
+				"buffer_size": 3105,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "/**************************************************************************************************/\n/*                                                                                                */\n/*  Informations :                                                                                */\n/*      This code is part of the project MLKL                                                     */\n/*                                                                                                */\n/*  Contacts :                                                                                    */\n/*      couet.julien@gmail.com                                                                    */\n/*                                                                                                */\n/**************************************************************************************************/\n\nrequire MLKL; \n\nfunction Float64[] LoadImage(\n  String path, \n  Float64 minv,\n  Float64 maxv) \n{\n  OpenImageInput img(path);\n  OpenImageSpec spec = img.spec();\n  OpenImageTypeDesc desc = OpenImageTypeDesc(OpenImage_BASETYPE_UINT8, OpenImage_AGGREGATE_SCALAR, OpenImage_VECSEMANTICS_NOXFORM);\n\n  Byte bytes[];\n  bytes.resize(spec.get_full_width() * spec.get_full_height() * spec.get_nchannels());\n  \n  Data data = bytes.data();\n  img.read_image(desc, data, 0, 0, 0);\n\n  // mnist dataset is \"white on black\", so negate required\n  Float64 image_data[];\n  image_data.resize(spec.get_full_width() * spec.get_full_height());\n\n  // Normalize the iamge between 0 and 1\n  for(Index i=0; i<spec.get_full_width() * spec.get_full_height(); ++i)\n  {\n    Float64 color = Float64(bytes[3*i]);\n    color = (255 - color) * (maxv - minv) / 255.0 + minv;\n    report(color);\n  }\n\n  return image_data;\n}\n\noperator entry() {\n\n  String path_config = \"C:/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/cnn_config.mlkl\";\n  String path_image = 'C:/Users/Julien/Documents/Dev/MLKL/data/mnist/4.bmp';\n\n  // Load the configuration file and set the network layers\n  MkCNNConfig config;\n  MkCNNLayerInterface layers[];\n  if(!config.config(path_config, layers))\n    return;\n\n  // Create the network\n  MkCNNNetwork nn(config.lossFunction(), config.optimizer(), layers);\n \n  // Set the initiale learning rate\n  Ref<MkCNNOptimizerInterface> opti = nn.optimizer();\n  nn.optimizer().learningRate(nn.optimizer().learningRate()* sqrt(config.batch_size));\n\n  // Declare the enumeration, here we can set the larning rate decay\n  // However, it should be set from the file, see Convnet for this\n  MkEnumerateEpoch on_epoch_enumerate(); \n  \n  // Load the training data\n  MkCNNTrainingData training_data = LoadTrainingData_MNIST(config);\n\n  // Train the network\n  // The network (the layers' weights) is tested and saved at each epch\n  nn.train(training_data, config, on_epoch_enumerate);\n\n\n  // Finally test it and save it\n  Float64 image_data[] = LoadImage(path_image, -1.0, 1.0);\n}\n\n",
+			"file": "app/samples/MkCCNApp.kl",
+			"file_size": 3032,
+			"file_write_time": 130805265657263783,
+			"settings":
+			{
+				"buffer_size": 2953,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "core/kl/ml/cnn/MkCNNConfig.kl",
+			"settings":
+			{
+				"buffer_size": 21534,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "core/kl/ml/cnn/MkCNNLayer.kl",
+			"settings":
+			{
+				"buffer_size": 23364,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "/**************************************************************************************************/\n/*                                                                                                */\n/*  Informations :                                                                                */\n/*      This code is part of the project MLKL                                                     */\n/*                                                                                                */\n/*  Contacts :                                                                                    */\n/*      couet.julien@gmail.com                                                                    */\n/*                                                                                                */\n/**************************************************************************************************/\n\nrequire MLKL; \n\nfunction Boolean[] CreateConnections() {\n  Boolean O = true;\n  Boolean X = false;\n\n  Boolean c[]; \n  c.push(O); c.push(X); c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(X);  \n  c.push(X); c.push(O); c.push(O); c.push(O); c.push(O); c.push(X); c.push(O); c.push(O);  \n  c.push(O); c.push(O); c.push(X); c.push(X); c.push(X); c.push(O); c.push(O); c.push(O);  \n  c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(O); c.push(X); c.push(O);  \n  c.push(O); c.push(O); c.push(O); c.push(X); c.push(X); c.push(X); c.push(O); c.push(O);  \n  c.push(O); c.push(X); c.push(X); c.push(O); c.push(X); c.push(O); c.push(O); c.push(O);  \n  c.push(X); c.push(O); c.push(O); c.push(O); c.push(X); c.push(X); c.push(O); c.push(O);  \n  c.push(O); c.push(O); c.push(X); c.push(X); c.push(O); c.push(X); c.push(O); c.push(O);  \n  c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(X); c.push(X); c.push(O);  \n  c.push(O); c.push(O); c.push(O); c.push(X); c.push(O); c.push(O); c.push(X); c.push(O);  \n  c.push(X); c.push(X); c.push(X); c.push(O); c.push(O); c.push(O); c.push(X); c.push(X);  \n  c.push(O); c.push(O); c.push(O); c.push(O); c.push(X); c.push(O); c.push(O); c.push(O);  \n  return c;\n}\n\nfunction MkCNNLayerInterface[] CreateLayers() {\n  MkCNNLayerInterface layers[];\n  layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  32, 32, 5,  1, 6));\n  layers.push(MkCNNLayerAveragePooling(MK_NEURON_TANH, 28, 28, 6,  2));\n  layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  14, 14, 5,  6,  16, MkCNNConnectionTable(CreateConnections(), 6, 16)));\n  layers.push(MkCNNLayerAveragePooling(MK_NEURON_TANH, 10, 10, 16, 2));\n  layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  5,  5,  5,  16, 120));\n  layers.push(MkCNNLayerFully(MK_NEURON_TANH, 120, 10));\n  return layers;\n}\n\nfunction LoadMNIST(\n  MkCNNConfig config,\n  io Float64 train_images[][],\n  io Float64 test_images[][],\n  io Index train_labels[],\n  io Index test_labels[]) \n{\n  MkMNIST mnist();\n  train_images = mnist.parseImages(config.train_images_path, -1.0, 1.0, 2, 2);\n  test_images = mnist.parseImages(config.test_images_path, -1.0, 1.0, 2, 2);\n  train_labels = mnist.parseLabels(config.train_labels_path);\n  test_labels = mnist.parseLabels(config.test_labels_path); \n}\n\noperator entry() {\n\n  // Load the data\n  Index train_labels[], test_labels[];\n  Float64 train_images[][], test_images[][];\n  LoadMNIST(config, train_images, test_images, train_labels, test_labels);\n\n  // Configure the network layers\n  MkCNNConfig config;\n  MkCNNLayerInterface layers = CreateLayers();\n \n  // Create the network\n  MkCNNNetwork nn(config.lossFunction(), config.optimizer(), layers);\n \n  // Set the initiale learning rate\n  Ref<MkCNNOptimizerInterface> opti = nn.optimizer();\n  nn.optimizer().learningRate(nn.optimizer().learningRate()* sqrt(config.batch_size));\n\n  // Declare the enumeration\n  // Here we could sate the larning rate decay\n  MkEnumerateEpoch on_epoch_enumerate(); \n  MkEnumerateData on_batch_enumerate(train_images.size(), config.batch_size); \n  \n  // Train the network\n  nn.train( config, train_images, train_labels, test_images, test_labels,\n            on_epoch_enumerate, on_batch_enumerate);\n\n\n  // Finally test it  \n  String path_image = 'C:/Users/Julien/Documents/Dev/MLKL/data/mnist/4.bmp';\n  Float64 image_data[] = LoadImage(path_image, -1.0, 1.0);\n}\n\n",
+			"file": "app/tests/MkCNNUnitTest.kl",
+			"file_size": 5265,
+			"file_write_time": 130805255100294230,
+			"settings":
+			{
+				"buffer_size": 4277,
 				"line_ending": "Windows"
 			}
 		}
@@ -120,30 +181,42 @@
 	},
 	"file_history":
 	[
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayer.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/layers_params.mlkl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/MLKL.fpm.json",
+		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/OpenImageIO/OpenImageInput.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/data/2015-07-04_13-37-05/res.mlkl",
+		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/Util/StringMethods.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/layers_def.mlkl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNNetwork.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayerFully.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNUtils.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayerPartial.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/layers_params.mlkl",
+		"/C/Users/Julien/Documents/Dev/MLKL/config/environment.bat",
+		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/cnn_config.mlkl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/c++/MNIST/MkMNIST.cpp",
+		"/C/Users/Julien/Documents/Dev/MLKL/data/2015-07-04_12-21-37/res.mlkl",
+		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/FileIO/FilePath.kl",
+		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/FileIO/FileSystem.kl",
+		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/FileIO/FileTime.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/c++/MNIST/MkMNIST.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/data/test.txt",
+		"/C/Users/Julien/Documents/Dev/MLKL/data/test.mlkl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayerPartial.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayerFully.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/c++/MNIST/SConstruct",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/c++/MNIST/global_functions.h",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/svm/MkSVM.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNFunction.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNOptimizer.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNUtils.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNConfig.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNDropout.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayer.kl",
+		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNNetwork.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNNNConfig.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/MkCCNApp.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNFunction.kl",
 		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/FileIO/TextReader.kl",
-		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/Util/StringMethods.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/c++/MNIST/MkMNIST.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/c++/MNIST/MkMNIST.cpp",
 		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/layers_def2.mlkl",
 		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/src/main.cpp",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNOptimizer.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/include/layer.h",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/MLKL.fpm.json",
 		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/include/network.h",
 		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/FileIO/TextWriter.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNDropout.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNConfig.kl",
 		"/C/Program Files/FabricEngine-1.15.2-Windows-x86_64/Exts/Builtin/FileIO/FileWriter.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/app/tests/MkCNNUnitTest.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/app/tests/MkCNNTest.kl",
@@ -157,11 +230,9 @@
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/cnn/MkCNNLayerPooling.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/include/dropout.h",
 		"/C/Users/Julien/Documents/Dev/MLKL/samples/tiny-cnn-master/include/activation_function.h",
-		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/svm/MkSVM.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/svm/MkSVMSMO.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/svm/MkSVMMultiClass.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/ml/svm/MkSVMKernel.kl",
-		"/C/Users/Julien/Documents/Dev/MLKL/config/environment.bat",
 		"/C/Users/Julien/Documents/Dev/MLKL/app/samples/MkSVMApp.kl",
 		"/C/Users/Julien/Documents/Dev/MLKL/core/kl/MLKL.json",
 		"/C/Users/Julien/Documents/Dev/KL_ML/core/kl/ml/cnn/MkCNNLayer.kl",
@@ -202,149 +273,150 @@
 	],
 	"find":
 	{
-		"height": 34.0
+		"height": 53.0
 	},
 	"find_in_files":
 	{
-		"height": 0.0,
+		"height": 90.0,
 		"where_history":
 		[
+			"C:\\Users\\Julien\\Documents\\Dev\\MLKL",
 			"C:\\Users\\Julien\\Documents\\Dev\\KL_ML"
 		]
 	},
 	"find_state":
 	{
-		"case_sensitive": false,
+		"case_sensitive": true,
 		"find_history":
 		[
-			"outputs",
-			"output",
-			"out2bias",
-			"minibatch_size",
-			"i",
-			"iter",
-			"p",
-			"string",
-			"String",
-			"std::",
-			"----------",
-			"/// \\Internal",
-			"netork",
-			"pool_type",
-			"activation_func",
-			"pooling_size",
-			"poolingSize",
-			"outChannels",
-			"poolingSize",
-			"out_channels",
-			"activation_func",
-			"pool_type",
-			"neuron",
-			"out_channels",
-			"outChannels",
-			"MK_LAYER_MAX_POOLING",
-			"MK_LAYER_BASE",
-			"if",
-			"MK_ACTIVATION_FUNC_IDENTITY",
-			"), l",
-			"layer_activation",
-			"parseConvolutional",
-			"activation_func",
-			"filtersStr",
-			"window_sizeStr",
-			"in_channelsStr",
-			"out_channels_strtr",
-			"in_ch",
-			"nC",
+			"SIFFAR",
+			"training_data",
+			"ins",
+			"\n  ",
+			"test_t",
+			"test_ins",
+			"ins",
+			"trainig_data",
+			"MkMNIST",
+			"\\",
+			"\\\\",
+			"gradient_check",
+			"gradientCheck",
+			"calcDeltaDiff",
+			"weights",
+			"w",
+			"worker",
+			"layer.name",
+			"());",
+			"\\",
+			"path_config",
+			"Index max_length = 7;",
+			"Index max_length = 5;",
+			"+ \"---\");",
+			"\\n ---",
+			"Index max_length = 15;",
+			"--- N",
+			"--- n",
+			"out_size",
+			"init_b",
+			"init_w",
+			"_w",
+			"neuron_func",
+			"n_c",
 			"in",
-			"in_",
-			"filters",
-			"window_size",
-			"neuron_nb",
-			"in_width",
-			"size_str",
-			"n_nb\"",
-			"ron_type\"",
-			"neuron_type",
-			"+1",
-			"size",
-			"neuron",
-			"fprop",
-			"trainOnce",
-			"w_hessian",
-			"divideHessian",
-			"calcHessian",
-			"targetValueMax",
-			"targetValueMin",
-			"w_hessian",
-			"return true",
-			"checkLayerConfig",
-			"config",
-			"MkCNNNNConfig",
-			"MkCNNLayerParseDefs",
-			"MkCNNParseLayerParams",
-			"parseConvolution",
-			"parseivationFunction",
-			"parseLayer",
-			"MkCNNParseLayerParams",
-			"MkCNNNNConfig",
-			";\n",
-			";",
-			"activation_func =",
-			"ACTIVATION_FUNC",
-			"activation_func",
-			"ACTIVATION_FUNC",
-			"activation_func",
-			"return",
-			"activation_func =",
-			"  ",
-			",",
-			";",
-			"parseLayer",
-			"//",
-			"MkCNNConfig",
-			"TexteReader",
-			"path_layer_param",
-			"path_layer_params",
-			"path_layer_config",
-			"parseLayerConfig",
-			"parseLayerParams",
-			"\\",
-			" //",
-			"inline",
-			"load",
-			"shuffle",
+			"neuron_func",
+			"neuron_fun",
+			"neuron_func",
+			"temp1",
+			"temp",
+			");",
+			"layer_name",
+			"layer_params",
+			"layer_name",
+			"= Pars",
+			"ParseLayersParams",
+			"time_buf",
+			"MLKL_EXTS_PATH",
+			"KLML",
+			"KLML_EXTS_CPP_MNIST_PATH",
+			"ReportR",
+			"toString",
+			"exist",
+			"outputPath",
+			"output_path",
+			"\\\\",
+			"nb_epoch",
+			"ParseInt",
+			"gpu",
+			"worker",
+			"epsB",
+			"epsW",
+			"params_counter ++; \n        line = reader.readLine(); ",
+			"public",
 			"private",
-			"overoad",
-			"calcHessian",
-			"\"",
-			"\\",
-			"//",
-			"modeAsString",
-			"//",
-			"// ",
-			"//",
-			"save",
-			"MkCNNLayerBase",
-			"CreateConnections",
-			"save",
-			"updateWeight",
-			"updateWeights",
-			"divideHessian",
-			"trainOnce",
-			"MK_GRAD_CHECK_RANDOM",
-			"worker_size",
-			"/// Object",
-			"propagetion",
-			"Construct",
-			"construct",
-			"divideHessian",
-			"rhs",
-			"setSize",
-			"DEFAULTSECT",
-			"config",
-			"them",
-			"c"
+			"MkCNNLayerConfig",
+			"parseConvolutional",
+			"parseData",
+			"Float64",
+			"batch_size",
+			"nb_epoch",
+			"layer",
+			"private",
+			"MkCNNLayerConfig",
+			"this.parseStr",
+			"parseStr",
+			"this.parseScalar",
+			"this.parseInt",
+			"this.parseNeuron",
+			"parseNeuronFunction",
+			"this",
+			"test_labels",
+			"testLabelsPath",
+			"output_dir_path",
+			"batch_size",
+			"this",
+			"weigth",
+			"Weight",
+			"weight",
+			"wieght",
+			"w",
+			"this",
+			"neuron",
+			"MkCNNLayerInput",
+			" Layer \" + layer_name);",
+			"reset",
+			"initWeight",
+			"getCurrentTicks",
+			"initWeight",
+			"initB=0.5",
+			"initW=0.1",
+			"MK_NEURON_FUNC",
+			"MkCNNNeuronFunction",
+			"MK_NEURON_FUNC",
+			"MK_LOSS_FUNC",
+			"MkCNNLossFunction",
+			"loss",
+			"MK_LOSS_FUNC",
+			"MkCNNLossFunction",
+			"neuronFunction",
+			"MkCNNNeuronFunctionInterface",
+			"neuron",
+			"neuronFunction",
+			"MkCNNNeuronFunctionInterface",
+			"neuronFunction",
+			"MkCNNNeuronFunction",
+			"MK_NEURON",
+			"MkCNNNeuronFunction",
+			"neuronpublic",
+			"Strin",
+			"=\");",
+			"=\"",
+			"FLoat64",
+			"MkCNNNeuronpublicInterface",
+			"init.(",
+			"filterSize",
+			"pool_type_str",
+			"initW"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -356,29 +428,29 @@
 		"reverse": false,
 		"show_context": true,
 		"use_buffer2": true,
-		"whole_word": false,
+		"whole_word": true,
 		"wrap": true
 	},
 	"groups":
 	[
 		{
-			"selected": 4,
+			"selected": 3,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "core/kl/ml/cnn/MkCNNLayer.kl",
+					"file": "core/kl/ml/cnn/MkCNNNetwork.kl",
 					"settings":
 					{
-						"buffer_size": 22693,
+						"buffer_size": 13026,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								5910,
-								5910
+								4084,
+								4084
 							]
 						],
 						"settings":
@@ -388,119 +460,87 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 540.0,
+						"translation.y": 1060.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "core/kl/ml/cnn/MkCNNDropout.kl",
+					"file": "app/samples/cnn/cnn_config.mlkl",
 					"settings":
 					{
-						"buffer_size": 5762,
+						"buffer_size": 900,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								194,
+								194
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage",
-							"tab_size": 2,
-							"translate_tabs_to_spaces": true
+							"syntax": "Packages/Text/Plain text.tmLanguage"
 						},
 						"translation.x": 0.0,
-						"translation.y": 1530.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 2,
-					"file": "app/samples/MkCCNApp.kl",
+					"file": "samples/tiny-cnn-master/include/network.h",
 					"settings":
 					{
-						"buffer_size": 4341,
+						"buffer_size": 15503,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								4054,
-								4054
+								12810,
+								12810
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage",
-							"tab_size": 2,
+							"syntax": "Packages/C++/C++.tmLanguage",
+							"tab_size": 4,
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 945.0,
+						"translation.y": 247.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
 				},
 				{
 					"buffer": 3,
-					"file": "core/kl/ml/cnn/MkCNNNetwork.kl",
+					"file": "README.md",
 					"settings":
 					{
-						"buffer_size": 13550,
+						"buffer_size": 1559,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								4775,
-								4775
+								1017,
+								1017
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage",
-							"tab_size": 2,
-							"translate_tabs_to_spaces": true
+							"syntax": "Packages/Markdown/Markdown.tmLanguage"
 						},
 						"translation.x": 0.0,
-						"translation.y": 2475.0,
-						"zoom_level": 1.0
-					},
-					"type": "text"
-				},
-				{
-					"buffer": 4,
-					"file": "core/kl/ml/cnn/MkCNNLayerPartial.kl",
-					"settings":
-					{
-						"buffer_size": 18531,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								5002,
-								5002
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage",
-							"tab_size": 2,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
+						"translation.y": 135.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -512,19 +552,47 @@
 			"sheets":
 			[
 				{
-					"buffer": 5,
-					"file": "core/kl/ml/cnn/MkCNNLayerFully.kl",
+					"buffer": 4,
+					"file": "samples/tiny-cnn-master/README.md",
 					"settings":
 					{
-						"buffer_size": 7400,
+						"buffer_size": 5298,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								2610,
-								2836
+								90,
+								90
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Markdown/Markdown.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "core/kl/ml/cnn/MkCNNData.kl",
+					"settings":
+					{
+						"buffer_size": 3105,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1956,
+								1956
 							]
 						],
 						"settings":
@@ -534,7 +602,117 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 340.0,
+						"translation.y": 225.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "app/samples/MkCCNApp.kl",
+					"settings":
+					{
+						"buffer_size": 2953,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2220,
+								2220
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 225.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "core/kl/ml/cnn/MkCNNConfig.kl",
+					"settings":
+					{
+						"buffer_size": 21534,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								13026,
+								13500
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 810.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "core/kl/ml/cnn/MkCNNLayer.kl",
+					"settings":
+					{
+						"buffer_size": 23364,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								8135,
+								8135
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1190.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 9,
+					"file": "app/tests/MkCNNUnitTest.kl",
+					"settings":
+					{
+						"buffer_size": 4277,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3310,
+								3319
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Sublime-KL-1.1/KL.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 590.0,
 						"zoom_level": 1.0
 					},
 					"type": "text"
@@ -570,7 +748,7 @@
 		"cols":
 		[
 			0.0,
-			0.683337814562,
+			0.5,
 			1.0
 		],
 		"rows":
@@ -605,6 +783,6 @@
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 195.0,
+	"side_bar_width": 214.0,
 	"status_bar_visible": true
 }
