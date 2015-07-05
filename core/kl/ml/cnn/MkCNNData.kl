@@ -23,12 +23,12 @@ require FileIO, Util, OpenImageIO;
   \endexample
 */
 
-struct MkCNNTrainingData() {
+struct MkCNNTrainingData {
   Index train_labels[];
   Index test_labels[];
   Float64 train_images[][];
   Float64 test_images[][];
-}
+};
 
 /**************************************************************************************************/
 /*                                               MNIST                                      */

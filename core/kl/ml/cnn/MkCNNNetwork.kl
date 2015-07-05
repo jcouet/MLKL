@@ -182,7 +182,7 @@ public MkCNNNetwork.train!(
     on_batch_enumerate.reset();
     for (Index j=0; j<data.train_images.size(); j+=config.batchSize()) 
     {
-      this.trainOnce(j, data.train_images, data.test_labels, 
+      this.trainOnce(j, data.train_images, data.train_labels, 
         Math_min(config.batchSize(), data.train_images.size() - j));
       on_batch_enumerate.update();
     }

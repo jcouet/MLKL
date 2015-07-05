@@ -18,7 +18,7 @@
 
 ## MkCNN framework
 - MkCNN is a KL implementation of a convolutional neural network.
-- MkCNN is inspired of both [tiny-cnn](https://github.com/nyanp/tiny-cnn/wiki), a convolutional neural network implemented in C++11 and [Convnet](https://code.google.com/p/cuda-convnet/).
+- MkCNN is inspired of both [tiny-cnn](https://github.com/nyanp/tiny-cnn/wiki) and [Convnet](https://code.google.com/p/cuda-convnet/).
 
 #### Features
 - Layers : Fully-connected, Dropout, Convolutional, Pooling (average and max)
@@ -27,9 +27,14 @@
 - Optimization : Stochastic gradient, Stochastic levenberg marquardt, AdaGrad, RmsProp
 
 
-#### Sample project
+#### Building
 * Requires [FabricEngine](http://fabricengine.com/get-fabric/), [scons](http://www.scons.org/) and a C++ compiler.
-* Compile the C++ MNIST using scons
-* Configure the network
+* Configure the environment in the config folder and set it
+* Compile the C++ extension using scons (to read MNIST data) : 
+	* cd core/exts/MNIST 
+	* scons 
+
+#### Sample project
+* Configure the network if needed
 * Launch the sample project
  

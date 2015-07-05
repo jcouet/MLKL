@@ -10,42 +10,12 @@
 
 require MLKL; 
 
-function Float64[] LoadImage(
-  String path, 
-  Float64 minv,
-  Float64 maxv) 
-{
-  OpenImageInput img(path);
-  OpenImageSpec spec = img.spec();
-  OpenImageTypeDesc desc = OpenImageTypeDesc(OpenImage_BASETYPE_UINT8, OpenImage_AGGREGATE_SCALAR, OpenImage_VECSEMANTICS_NOXFORM);
-
-  Byte bytes[];
-  bytes.resize(spec.get_full_width() * spec.get_full_height() * spec.get_nchannels());
-  
-  Data data = bytes.data();
-  img.read_image(desc, data, 0, 0, 0);
-
-  // mnist dataset is "white on black", so negate required
-  Float64 image_data[];
-  image_data.resize(spec.get_full_width() * spec.get_full_height());
-
-  // Normalize the iamge between 0 and 1
-  for(Index i=0; i<spec.get_full_width() * spec.get_full_height(); ++i)
-  {
-    Float64 color = Float64(bytes[3*i]);
-    color = (255 - color) * (maxv - minv) / 255.0 + minv;
-    report(color);
-  }
-
-  return image_data;
-}
 
 operator entry() {
 
   String path_config = "C:/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/cnn_config.mlkl";
   String path_image = 'C:/Users/Julien/Documents/Dev/MLKL/data/mnist/4.bmp';
 
- 
   // Load the configuration file and set the network layers
   MkCNNConfig config;
   MkCNNLayerInterface layers[];

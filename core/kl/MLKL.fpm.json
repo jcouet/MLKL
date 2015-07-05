@@ -9,7 +9,6 @@
     "ml/svm/MkSVMSMO.kl",
     "ml/svm/MkSVMMultiClass.kl",
 
-    "ml/cnn/MkCNNData.kl",
     "ml/cnn/MkCNNUtils.kl",
     "ml/cnn/MkCNNFunction.kl",
     "ml/cnn/MkCNNDropout.kl",
@@ -18,6 +17,7 @@
     "ml/cnn/MkCNNLayerPartial.kl",
     "ml/cnn/MkCNNLayerFully.kl",
     "ml/cnn/MkCNNConfig.kl",
+    "ml/cnn/MkCNNData.kl",
     "ml/cnn/MkCNNNetwork.kl"
   ]
 }
