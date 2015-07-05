@@ -18,13 +18,12 @@
 
 ## MkCNN framework
 - MkCNN is a KL implementation of a convolutional neural network.
-- MkCNN is inspired of both [tiny-cnn](https://github.com/nyanp/tiny-cnn/wiki), a convoluional neural network implemented in C++11 and [Convnet](https://code.google.com/p/cuda-convnet/).
-
-#### Layers
-* Fully-connected
-* Dropout
-* Convolutional
-* Pooling (average and max)
+- MkCNN is inspired of both [tiny-cnn](https://github.com/nyanp/tiny-cnn/wiki), a convolutional neural network implemented in C++11 and [Convnet](https://code.google.com/p/cuda-convnet/).
+- Layers
+	* Fully-connected
+	* Dropout
+	* Convolutional
+	* Pooling (average and max)
 
 #### Neurons
 * tanh
