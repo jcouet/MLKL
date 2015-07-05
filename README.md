@@ -1,7 +1,7 @@
 # MLKL
 
 - MLKL is a machine learning framework written in [kl](http://fabricengine.com/) used to automaticaally classify images. 
-- It supports two differents frameworks :
+- It supports two differents frameworks 
 	* [MkSVM : Support vector machine](#MkSVM-framework)
 	* [MkCNN : Deep learning](#MkCNN-framework)
 - It purpose is to provide efficient parallel implementations that can run both on CPU and GPU (AMD or CUDA). At the moment, only CPU parallelism is supported but GPU will come soon.
@@ -10,7 +10,7 @@
 
 
 ## MkSVM framework
-- MkSVM is inspired of [Accord](http://accord-framework.net/)
+- MkSVM is inspired of [Accord.net](http://accord-framework.net/)
 - It's still under developement, not fully tested
  
 
@@ -29,8 +29,8 @@
 
 #### Building
 * Requires [FabricEngine](http://fabricengine.com/get-fabric/), [scons](http://www.scons.org/) and a C++ compiler.
-* Configure the environment in the config folder and set it
-* Compile the C++ extension using scons (to read MNIST data) : 
+* Configure the environment from config/environment.bat (or .sh) file and set it
+* Compile the C++ extension using scons (to read MNIST data) 
 	* cd core/exts/MNIST 
 	* scons 
 

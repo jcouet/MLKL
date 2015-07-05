@@ -196,6 +196,18 @@ public Float64[] MkCNNNetwork.predict!(Float64 ins[]) {
   return this.fprop(ins, 0);
 }
 
+inline Float64 RescaleTemp(Float64 x) {
+  return 100.0 * (x - (-0.8)) / (+0.8 - (-0.8));
+}
+
+/// Return the prediction of the input
+public Float64[] MkCNNNetwork.predictRescale!(Float64 ins[]) {
+  Float64 outs[] = this.fprop(ins, 0);
+  for(Index i=0; i<outs.size(); ++i)
+    outs[i] = RescaleTemp(outs[i]);
+  return outs;
+}
+
 /// Test the network, use after training 
 public MkCNNNetworkResult MkCNNNetwork.test!(Float64 ins[][], Index t[]) {
   

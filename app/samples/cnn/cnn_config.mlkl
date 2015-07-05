@@ -7,7 +7,7 @@
 
 worker=1
 gpu=0
-nbEpoch=5
+nbEpoch=1
 batchSize=100
 optimizer=1
 lossFunction=0

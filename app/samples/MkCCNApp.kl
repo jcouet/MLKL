@@ -42,6 +42,7 @@ operator entry() {
 
 
   // Finally test it and save it
-  Float64 image_data[] = LoadImage(path_image, -1.0, 1.0);
+  Float64 image_data[] = LoadValidationData_MNIST(path_image, -1.0, 1.0);
+  report(nn.predictRescale(image_data));
 }
 

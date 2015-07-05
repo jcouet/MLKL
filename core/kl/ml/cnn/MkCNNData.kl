@@ -41,6 +41,37 @@ public MkCNNTrainingData LoadTrainingData_MNIST(MkCNNConfig config) {
   data.test_labels = mnist.parseLabels(config.test_labels_path); 
   return data;
 }
+
+function Float64[] LoadValidationData_MNIST(
+  String path, 
+  Float64 minv,
+  Float64 maxv) 
+{
+  OpenImageInput img(path);
+  OpenImageSpec spec = img.spec();
+  OpenImageTypeDesc desc = OpenImageTypeDesc(OpenImage_BASETYPE_UINT8, OpenImage_AGGREGATE_SCALAR, OpenImage_VECSEMANTICS_NOXFORM);
+
+  Byte bytes[];
+  bytes.resize(spec.get_full_width() * spec.get_full_height() * spec.get_nchannels());
+  
+  Data data = bytes.data();
+  img.read_image(desc, data, 0, 0, 0);
+
+  // mnist dataset is "white on black", so negate required
+  Float64 validation_data[];
+  validation_data.resize(spec.get_full_width() * spec.get_full_height());
+
+  // Normalize the iamge between 0 and 1
+  for(Index i=0; i<spec.get_full_width() * spec.get_full_height(); ++i)
+  {
+    Float64 color = Float64(bytes[3*i]);
+    color = (255.0 - color) * (maxv - minv) / 255.0 + minv;
+    validation_data[i] = color;
+    //report(color);
+  }
+
+  return validation_data;
+}
 /*                                                   MNIST                                        */
 /**************************************************************************************************/
 
