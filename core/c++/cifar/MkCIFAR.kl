@@ -1,0 +1,20 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+
+object MkCIFAR {
+  Data handle;
+};    
+ 
+function MkCIFAR.parseBatch(
+  String path,
+  io Float64 images[][],
+  io UInt32 labels[]) 
+= "MkCIFAR_parseBatch";

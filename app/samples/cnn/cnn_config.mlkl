@@ -7,20 +7,29 @@
 
 worker=1
 gpu=0
-nbEpoch=1
+nbEpoch=2
 batchSize=100
 optimizer=1
 lossFunction=0
 
 # Set the layer def et params pathes
-layersDefsPath=C:/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/layers_def.mlkl
-layersParamsPath=C:/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/layers_params.mlkl
+layersDefsPath=C:/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/cnn_layers_def.mlkl
+layersParamsPath=C:/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/cnn_layers_params.mlkl
 
-# Set data pathes
-trainImagesPath=C:/Users/Julien/Documents/Dev/MLKL/data/mnist/train-images.idx3-ubyte
-testImagesPath=C:/Users/Julien/Documents/Dev/MLKL/data/mnist/t10k-images.idx3-ubyte
-trainLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/data/mnist/train-labels.idx1-ubyte
-testLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/data/mnist/t10k-labels.idx1-ubyte
+
+# For CIFAR
+trainImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/cifar-10/data_batch_1.bin
+testImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/cifar-10/test_batch.bin
+trainLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-labels.idx1-ubyte
+testLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-labels.idx1-ubyte
 
 # Set the output
-outputDirPath=C:/Users/Julien/Documents/Dev/MLKL/data/
+outputDirPath=C:/Users/Julien/Documents/Dev/MLKL/resources/
+
+# Set data pathes
+# For MNIST
+
+#trainImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-images.idx3-ubyte
+#testImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-images.idx3-ubyte
+#trainLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-labels.idx1-ubyte
+#testLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-labels.idx1-ubyte

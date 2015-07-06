@@ -21,7 +21,7 @@
 namespace Fabric { namespace EDK { namespace KL {
 
 // KL object 'MkMNIST'
-// Defined at MkMNIST.kl:12:1
+// Defined at MkMNIST.kl:11:1
 
 class MkMNIST
 {

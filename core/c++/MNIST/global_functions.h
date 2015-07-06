@@ -19,92 +19,92 @@
 #include "global.h"
 
 
-// Defined at MkMNIST.kl:26:1
+// Defined at MkMNIST.kl:27:1
 FABRIC_EXT_EXPORT void UniformRand_Float64(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float64 >::INParam min,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float64 >::INParam max,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float64 >::IOParam res
 );
 
-// Defined at MkMNIST.kl:28:1
+// Defined at MkMNIST.kl:29:1
 FABRIC_EXT_EXPORT void UniformRand_Float32(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float32 >::INParam min,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float32 >::INParam max,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float32 >::IOParam res
 );
 
-// Defined at MkMNIST.kl:30:1
+// Defined at MkMNIST.kl:31:1
 FABRIC_EXT_EXPORT void UniformRand_SInt32(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::SInt32 >::INParam min,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::SInt32 >::INParam max,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::SInt32 >::IOParam res
 );
 
-// Defined at MkMNIST.kl:32:1
+// Defined at MkMNIST.kl:33:1
 FABRIC_EXT_EXPORT void UniformRand_UInt32(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::UInt32 >::INParam min,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::UInt32 >::INParam max,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::UInt32 >::IOParam res
 );
 
-// Defined at MkMNIST.kl:35:1
+// Defined at MkMNIST.kl:36:1
 FABRIC_EXT_EXPORT void UniformRealDistribution_Float64(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float64 >::INParam min,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float64 >::INParam max,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::VariableArray< Fabric::EDK::KL::Float64 > >::IOParam dist
 );
 
-// Defined at MkMNIST.kl:37:1
+// Defined at MkMNIST.kl:38:1
 FABRIC_EXT_EXPORT void UniformRealDistribution_Float32(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float32 >::INParam min,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float32 >::INParam max,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::VariableArray< Fabric::EDK::KL::Float32 > >::IOParam dist
 );
 
-// Defined at MkMNIST.kl:39:1
+// Defined at MkMNIST.kl:40:1
 FABRIC_EXT_EXPORT void UniformRealDistribution_UInt32(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::UInt32 >::INParam min,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::UInt32 >::INParam max,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::VariableArray< Fabric::EDK::KL::UInt32 > >::IOParam dist
 );
 
-// Defined at MkMNIST.kl:41:1
+// Defined at MkMNIST.kl:42:1
 FABRIC_EXT_EXPORT void UniformRealDistribution_SInt32(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::SInt32 >::INParam min,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::SInt32 >::INParam max,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::VariableArray< Fabric::EDK::KL::SInt32 > >::IOParam dist
 );
 
-// Defined at MkMNIST.kl:43:1
+// Defined at MkMNIST.kl:44:1
 FABRIC_EXT_EXPORT void Bernoulli_Float64(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float64 >::INParam p,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Boolean >::IOParam res
 );
 
-// Defined at MkMNIST.kl:45:1
+// Defined at MkMNIST.kl:46:1
 FABRIC_EXT_EXPORT void Bernoulli_Float32(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float32 >::INParam p,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Boolean >::IOParam res
 );
 
-// Defined at MkMNIST.kl:47:1
+// Defined at MkMNIST.kl:48:1
 FABRIC_EXT_EXPORT void Bernoulli_Float64_UInt32(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float64 >::INParam p,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::UInt32 >::IOParam res
 );
 
-// Defined at MkMNIST.kl:49:1
+// Defined at MkMNIST.kl:50:1
 FABRIC_EXT_EXPORT void Bernoulli_Float32_UInt32(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::Float32 >::INParam p,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::UInt32 >::IOParam res
 );
 
-// Defined at MkMNIST.kl:52:1
+// Defined at MkMNIST.kl:53:1
 FABRIC_EXT_EXPORT void ReportR(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::String >::INParam str
 );
 
-// Defined at MkMNIST.kl:54:1
+// Defined at MkMNIST.kl:55:1
 FABRIC_EXT_EXPORT void CurrentDateTime(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::String >::IOParam str
 );

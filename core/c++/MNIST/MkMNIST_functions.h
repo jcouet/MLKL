@@ -20,14 +20,14 @@
 #include "MkMNIST_type.h"
 
 
-// Defined at MkMNIST.kl:16:1
+// Defined at MkMNIST.kl:15:1
 FABRIC_EXT_EXPORT void MkMNIST_parseLabels(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::VariableArray< Fabric::EDK::KL::UInt32 > >::Result _result,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::MkMNIST >::INParam this_,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::String >::INParam path
 );
 
-// Defined at MkMNIST.kl:18:1
+// Defined at MkMNIST.kl:17:1
 FABRIC_EXT_EXPORT void MkMNIST_parseImages(
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::VariableArray< Fabric::EDK::KL::VariableArray< Fabric::EDK::KL::Float64 > > >::Result _result,
   Fabric::EDK::KL::Traits< Fabric::EDK::KL::MkMNIST >::INParam this_,

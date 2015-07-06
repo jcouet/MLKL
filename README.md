@@ -5,7 +5,7 @@
 	* [MkSVM : Support vector machine](#MkSVM-framework)
 	* [MkCNN : Deep learning](#MkCNN-framework)
 - It purpose is to provide efficient parallel implementations that can run both on CPU and GPU (AMD or CUDA). At the moment, only CPU parallelism is supported but GPU will come soon.
-- For now, the implementation works with the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset only. In the futur, more tests will be performed with the [CIFAR](http://www.cs.toronto.edu/~kriz/cifar.html) dataset. Furthemore, code will be released soon to convert images of any format to the right format for the network.
+- For now, the implementation works with the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset only. In the futur, more tests will be performed with the [CIFAR](http://www.cs.toronto.edu/~kriz/cifar.html) dataset and [others](http://rodrigob.github.io/are_we_there_yet/build/classification_datasets_results.html). Furthemore, code will be released soon to convert images of any format to the right format for the network.
 
 
 

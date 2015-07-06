@@ -1,13 +1,12 @@
 /**************************************************************************************************/
 /*                                                                                                */
 /*  Informations :                                                                                */
-/*      This code is part of the project Medical                                                  */
+/*      This code is part of the project MLKL                                                     */
 /*                                                                                                */
 /*  Contacts :                                                                                    */
 /*      couet.julien@gmail.com                                                                    */
 /*                                                                                                */
 /**************************************************************************************************/
-
 
 object MkMNIST {
   Data handle;
@@ -22,6 +21,8 @@ function Float64[][] MkMNIST.parseImages(
   Float64 x_padding,
   Float64 y_padding) 
 = "MkMNIST_parseImages";
+
+/******/
 
 function UniformRand(Float64 min, Float64 max, io Float64 res) = "UniformRand_Float64";
  
@@ -52,4 +53,5 @@ function Bernoulli(Float32 p, io UInt32 res) = "Bernoulli_Float32_UInt32";
 function ReportR(String str) = "ReportR";
 
 function CurrentDateTime(io String str) = "CurrentDateTime";
+
 

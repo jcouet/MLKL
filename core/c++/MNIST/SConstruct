@@ -1,7 +1,7 @@
 ####################################################################################################
 #                                                                                                  #
 #   Informations :                                                                                 #
-#       This code is part of the project Medical                                                   #
+#       This code is part of the project MLKL                                                      #
 #                                                                                                  #
 #   Contacts :                                                                                     #
 #       couet.julien@gmail.com                                                                     #
@@ -26,11 +26,7 @@ flags = {
   'CPPPATH': ['C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\include'],
   'LIBPATH': []
 }
-#flags['LINKFLAGS'] = [
-# '-stdlib=libc++']
 flags['CPPFLAGS'] = ['/O2']
-
-#C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\include
 
 fabricBuildEnv.MergeFlags(flags)
 fabricBuildEnv.Extension(

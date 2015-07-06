@@ -1,7 +1,7 @@
 /**************************************************************************************************/
 /*                                                                                                */
 /*  Informations :                                                                                */
-/*      This code is part of the project Medical                                                  */
+/*      This code is part of the project MLKL                                                     */
 /*                                                                                                */
 /*  Contacts :                                                                                    */
 /*      couet.julien@gmail.com                                                                    */
@@ -30,13 +30,13 @@ IMPLEMENT_FABRIC_EDK_ENTRIES( MkMNIST )
 
 #define ReverseEndian(x) ReverseEndianFunc((unsigned char *) &x, sizeof(x))
 void ReverseEndianFunc(unsigned char * b, int n) {
-   int i = 0;
-   int j = n-1;
-   while (i<j)
-   {
-      swap(b[i], b[j]);
-      i++, j--;
-   }
+  int i = 0;
+  int j = n-1;
+  while (i<j)
+  {
+    swap(b[i], b[j]);
+    i++, j--;
+  }
 }
 
 FABRIC_EXT_EXPORT void MkMNIST_parseLabels(
@@ -48,7 +48,7 @@ FABRIC_EXT_EXPORT void MkMNIST_parseLabels(
   ifstream ifs(path.data(), ios::in | ios::binary);
   if (ifs.bad() || ifs.fail())
   {
-    cout << "Error MkMNIST_parseLabels : image-file error" << endl;
+    cerr << "Error MkMNIST_parseLabels : image-file error" << endl;
     return;
   }
 
@@ -60,7 +60,7 @@ FABRIC_EXT_EXPORT void MkMNIST_parseLabels(
   ReverseEndian(num_items);
   if (magic_number != 0x00000801 || num_items <= 0)
   {
-    cout << "Error MkMNIST_parseLabels : image-file format error" << endl;
+    cerr << "Error MkMNIST_parseLabels : image-file format error" << endl;
     return;
   }
 
@@ -102,15 +102,13 @@ inline void parseMNISTImage(
   for (size_t y = 0; y < header.num_rows; y++)
   { 
     for (size_t x = 0; x < header.num_cols; x++)
-    {
       dst[width * (y + y_padding) + x + x_padding]
       = (image_vec[y * header.num_cols + x] / 255.0) * (scale_max - scale_min) + scale_min;
-      //cerr << "dst[" << y << "][" << x << "] " << dst[width * (y + y_padding) + x + x_padding] << endl;
-    }
   }
 }
 
 inline void parseMNISTHeader(ifstream& ifs, mnist_header& header) {
+  
   ifs.read((char*) &header.magic_number, 4);
   ifs.read((char*) &header.num_items, 4);
   ifs.read((char*) &header.num_rows, 4);
@@ -121,12 +119,12 @@ inline void parseMNISTHeader(ifstream& ifs, mnist_header& header) {
   ReverseEndian( header.num_cols);
   if (header.magic_number != 0x00000803 || header.num_items <= 0)
   {
-    cout << "Error parseMNISTHeader : image-file format error" << endl;
+    cerr << "Error parseMNISTHeader : image-file format error" << endl;
     return;
   }
   if (ifs.fail() || ifs.bad())
   {
-    cout << "Error parseMNISTHeader : file error" << endl;
+    cerr << "Error parseMNISTHeader : file error" << endl;
     return;
   }
 }
@@ -152,8 +150,7 @@ FABRIC_EXT_EXPORT void MkMNIST_parseImages(
     parseMNISTImage(ifs, header, scale_min, scale_max, x_padding, y_padding, images[i]);
 }
 
-/****************/
-
+/********/
 
 template<typename T> inline 
 typename enable_if<is_integral<T>::value, T>::type UniformRand(T min, T max) {
@@ -269,9 +266,7 @@ FABRIC_EXT_EXPORT void Bernoulli_Float32_UInt32(
 {
   res = KL::UInt32(UniformRand(0.0f, 1.0f) <= float(p));
 }
-
-/****************/
-
+ 
 FABRIC_EXT_EXPORT void ReportR(KL::Traits< KL::String >::INParam str) {
   cerr << string(str.data()) << "\r";
 }

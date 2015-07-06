@@ -1,0 +1,71 @@
+# MLKL Network layers definition file
+
+# How to declare a layer 
+# [conv1]       : Name of the layer           
+# type=conv     : Type (data, conv, pool, fc)           
+# neuron=relu   : Neuron (relu, relu, exp)         
+# filters=32    :                
+# filterSize=5  : Windowing size  
+# inChannels=1  : Number of inputs    
+# outChannels=6 : Number of outputs                   
+# initW=0.1     : Initiliaze the layers' weights with a normal distribution of std initW
+# initB=0.5     : Initiliaze the layers' weights with a normal distribution of std initB
+
+[conv1]
+type=conv
+neuron=relu
+filters=32
+filterSize=5
+inChannels=1
+outChannels=6
+initW=0.0001
+initB=0.0
+
+[pool1]
+type=pool
+pool=max
+neuron=relu
+filters=28
+inChannels=6
+poolingSize=2
+initW=0.0
+initB=0.0
+
+[conv2]
+type=conv
+neuron=relu
+filters=14
+filterSize=5
+inChannels=6
+outChannels=16
+initW=0.1
+initB=0.0
+
+[pool2]
+type=pool
+pool=max
+neuron=relu
+filters=10
+inChannels=16
+poolingSize=2
+initW=0.0
+initB=0.0
+
+[conv3]
+type=conv
+neuron=relu
+filters=5
+filterSize=5
+inChannels=16
+outChannels=120
+initW=0.1
+initB=0.0
+
+[fc3]
+type=fc
+neuron=relu
+inChannels=120
+outChannels=10
+initW=0.0
+initB=0.0
+

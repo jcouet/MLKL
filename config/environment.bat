@@ -8,9 +8,10 @@ set PYTHON_VERSION=2.7
 set PYTHONPATH=%FABRIC_DIR%\Python\%PYTHON_VERSION%;%PYTHONPATH%
 set PYTHON_VERSION=%_OLD_PYTHON_VERSION%
 
-set MLKL_CPP_EXTS=C:\Users\Julien\Documents\Dev\MLKL\core\c++\MNIST
+set MLKL_MNIST_EXT=C:\Users\Julien\Documents\Dev\MLKL\core\c++\mnist
+set MLKL_CIFAR_EXT=C:\Users\Julien\Documents\Dev\MLKL\core\c++\cifar
 set MLKL_EXTS=C:\Users\Julien\Documents\Dev\MLKL\core\kl
  
 set FABRIC_EXTS_PATH=%FABRIC_DIR%\Exts
-set FABRIC_EXTS_PATH=%MLKL_CPP_EXTS%;%MLKL_EXTS%;%FABRIC_EXTS_PATH%
+set FABRIC_EXTS_PATH=%MLKL_CIFAR_EXT%;%MLKL_MNIST_EXT%;%MLKL_EXTS%;%FABRIC_EXTS_PATH%
 
