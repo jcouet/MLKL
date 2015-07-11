@@ -1,11 +1,16 @@
-# MLKL Network layers parameters file
+### MLKL layers parameters  
 
-#[conv2]
-#epsW=0.001
-#epsB=0.002
-#momW=0.9
-#momB=0.9
-#wc=0.000
+
+##############################################################################
+#
+# [name] : Name of the layer           
+# epsW   : Type (data, conv, pool, fc)      
+# epsB   : Neuron (relu, relu, exp)         
+# momW   :                
+# momB   : Windowing size  
+# wc     : Number of inputs    
+#
+##############################################################################
 
 [conv1]
 epsW=1
@@ -27,7 +32,7 @@ epsB=3
 momW=3
 momB=3
 wc=3
- 
+
 [fc3]
 epsW=4
 epsB=4

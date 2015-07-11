@@ -1,0 +1,446 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require MLKL; 
+
+
+object MkSVMSMO { 
+  // Training data
+  Float64 inputs[][];
+  SInt32 outputs[];
+  // Learning algorithm parameters
+  Float64 c;
+  Float64 tolerance;
+  Float64 epsilon;
+  Boolean use_complexity_heuristic;
+  // Support Vector Machine parameters
+  Index random_offset;
+  MkSVMInterface machine;
+  Float64 alpha[];
+  Float64 bias;
+  // Error cache to speed up computations
+  Float64 errors[];
+};
+
+inline MkSVMSMO.init!() {
+  this.c = 1.0;
+  this.random_offset = 0;
+  this.tolerance = 0.1;//1e-3;
+  this.epsilon = 0.1;//1e-3;
+}
+
+function MkSVMSMO() {
+  this.init();
+}
+
+// Initializes a new instance of a Sequential Minimal Optimization (SMO) algorithm.
+// A Support Vector Machine
+// The input data points as row vectors
+// The classification label for each data point in the range [-1;+1]
+function MkSVMSMO(
+  MkSVMInterface machine, 
+  Float64 inputs[][], 
+  SInt32 outputs[]) 
+{
+  this.init();
+  this.machine = machine; 
+  // Learning data
+  this.inputs = inputs;
+  this.outputs = outputs;
+}
+
+// Computes the error rate for a given set of input and outputs.
+inline SInt32 MkSVMSMO.sign(Float64 val) {
+  SInt32 res = (val >= 0)?1:-1;
+  return res;
+}
+
+function Float64 MkSVMSMO.computeError!(
+  Float64 inputs[][], 
+  SInt32 expected_outputs[])
+{
+  // Compute errors
+  SInt32 count = 0;
+  for (SInt32 i = 0; i < this.inputs.size(); i++)
+  {
+    report("this.compute(inputs[i]) " + this.compute(inputs[i]));
+    report("expected_outputs[i] " + expected_outputs[i]);
+
+    if (this.sign(this.compute(inputs[i])) != this.sign(expected_outputs[i]))
+      count++;
+  }
+
+  // Return misclassification error ratio
+  return Float64(count) / Float64(inputs.size());
+}
+  
+// Chooses which multipliers to optimize using heuristics.
+function SInt32 MkSVMSMO.examineExample!(SInt32 i2) {
+
+  Float64 p2[] = this.inputs[i2].clone(); // Input point at index i2
+  Float64 y2 = this.outputs[i2].clone();  // Classification label for p2
+  Float64 alph2 = this.alpha[i2].clone();    // Lagrange multiplier for p2
+
+  // SVM output on p2 - y2. Check if it has already been computed
+  Float64 e2 = (alph2 > 0 && alph2 < this.c) ? this.errors[i2] : this.compute(p2) - y2;
+  Float64 r2 = y2 * e2;
+
+  // Heuristic 01 (for the first multiplier choice):
+  //  - Testing for KKT conditions within the tolerance margin
+  if (!(r2 < -this.tolerance && alph2 < this.c) && !(r2 > this.tolerance && alph2 > 0))
+    return 0;
+
+  // Heuristic 02 (for the second multiplier choice):
+  //  - Once a first Lagrange multiplier is chosen, SMO chooses the second Lagrange multiplier to
+  //    maximize the size of the step taken during joint optimization. Now, evaluating the kernel
+  //    function is time consuming, so SMO approximates the step size by the absolute value of the
+  //    absolute error difference.
+  SInt32 i1 = -1; Float64 max_ = 0;
+  for (SInt32 i = 0; i < this.inputs.size(); i++)
+  {
+    if (this.alpha[i] > 0 && this.alpha[i] < this.c)
+    {
+      Float64 error1 = this.errors[i];
+      Float64 aux = abs(e2 - error1);
+      if(aux > max_)
+      {
+        max_ = aux;
+        i1 = i;
+      }
+    }
+  }
+
+  if (i1 >= 0 && this.takeStep(i1, i2)) 
+    return 1;
+
+  //for(Size i=0;i<20;i++)
+  //report(mathRandomScalar(17, i));
+
+  // Heuristic 03:
+  //  - Under unusual circumstances, SMO cannot make positive progress using the second
+  //    choice heuristic above. If it is the case, then SMO starts iterating through the
+  //    non-bound examples, searching for an second example that can make positive progress.
+  SInt32 start = ceil(this.inputs.size()*mathRandomScalar(17, this.random_offset));
+  this.random_offset ++;
+  
+  for (i1 = start; i1 < this.inputs.size(); i1++)
+  {
+    if (this.alpha[i1] > 0 && this.alpha[i1] < this.c)
+      if (this.takeStep(i1, i2)) 
+        return 1;
+  }
+  for (i1 = 0; i1 < start; i1++)
+  {
+    if (this.alpha[i1] > 0 && this.alpha[i1] < this.c)
+      if (this.takeStep(i1, i2)) 
+        return 1;
+  }
+
+  // Heuristic 04:
+  //  - If none of the non-bound examples make positive progress, then SMO starts iterating
+  //    through the entire training set until an example is found that makes positive progress.
+  //    Both the iteration through the non-bound examples and the iteration through the entire
+  //    training set are started at random locations, in order not to bias SMO towards the
+  //    examples at the beginning of the training set. 
+  start = Index(this.inputs.size()*mathRandomScalar(17, this.random_offset));
+  for (i1 = start; i1 < this.inputs.size(); i1++)
+  {
+    if (this.takeStep(i1, i2)) 
+      return 1;
+  }
+
+  for (i1 = 0; i1 < start; i1++)
+  {
+    if (this.takeStep(i1, i2)) 
+      return 1;
+  }
+
+  // In extremely degenerate circumstances, none of the examples will make an adequate second
+  // example. When this happens, the first example is skipped and SMO continues with another
+  // chosen first example.
+  return 0;
+}
+
+// Analytically solves the optimization problem for two Lagrange multipliers.
+function Boolean MkSVMSMO.takeStep!(SInt32 i1, SInt32 i2) {
+
+  if (i1 == i2) return false;
+
+  Float64 p1[] = this.inputs[i1]; // Input point at index i1
+  Float64 alph1 = this.alpha[i1];    // Lagrange multiplier for p1
+  Float64 y1 = this.outputs[i1];  // Classification label for p1
+
+  // SVM output on p1 - y1. Check if it has already been computed
+  Float64 e1 = (alph1 > 0 && alph1 < this.c) ? this.errors[i1] : this.compute(p1) - y1;
+
+  Float64 p2[] = this.inputs[i2]; // Input point at index i2
+  Float64 alph2 = this.alpha[i2];    // Lagrange multiplier for p2
+  Float64 y2 = this.outputs[i2];  // Classification label for p2
+
+  // SVM output on p2 - y2. Check if it has already been computed
+  Float64 e2 = (alph2 > 0 && alph2 < this.c) ? this.errors[i2] : this.compute(p2) - y2;
+  Float64 s = y1 * y2;
+
+
+  // Compute L and H according to equations (13) and (14) (Platt, 1998)
+  Float64 L, H;
+  if (y1 != y2)
+  {
+    // If the target y1 does not equal the target           (13)
+    // y2, then the following bounds apply to a2:
+    L = Math_max(0, alph2 - alph1);
+    H = Math_min(this.c, this.c + alph2 - alph1);
+  }
+  else
+  {
+    // If the target y1 does equal the target               (14)
+    // y2, then the following bounds apply to a2:
+    L = Math_max(0,  alph2 + alph1 - this.c);
+    H = Math_min(this.c,  alph2 + alph1);
+  }
+
+  if (L == H) return false;
+
+  Float64 k11, k22, k12, eta;
+  k11 = this.machine.func(p1, p1);
+  k12 = this.machine.func(p1, p2);
+  k22 = this.machine.func(p2, p2);
+  eta = k11 + k22 - 2.0 * k12;
+
+  Float64 a1, a2;
+  if (eta > 0)
+  {
+    a2 = alph2 - y2 * (e2 - e1) / eta;
+    if (a2 < L) 
+      a2 = L;
+    else if (a2 > H) 
+      a2 = H;
+  }
+  else
+  {
+    // Compute objective function Lobj and Hobj at
+    //  a2=L and a2=H respectively, using (eq. 19)
+    Float64 L1 = alph1 + s * (alph2 - L);
+    Float64 H1 = alph1 + s * (alph2 - H);
+    Float64 f1 = y1 * (e1 + this.bias) - alph1 * k11 - s * alph2 * k12;
+    Float64 f2 = y2 * (e2 + this.bias) - alph2 * k22 - s * alph1 * k12;
+    Float64 Lobj = -0.5 * L1 * L1 * k11 - 0.5 * L * L * k22 - s * L * L1 * k12 - L1 * f1 - L * f2;
+    Float64 Hobj = -0.5 * H1 * H1 * k11 - 0.5 * H * H * k22 - s * H * H1 * k12 - H1 * f1 - H * f2;
+
+    if (Lobj > Hobj + this.epsilon) 
+      a2 = L;
+    else if (Lobj < Hobj - this.epsilon) 
+      a2 = H;
+    else 
+      a2 = alph2;
+  }
+
+  if (abs(a2 - alph2) < this.epsilon * (a2 + alph2 + this.epsilon))
+    return false;
+
+  a1 = alph1 + s * (alph2 - a2);
+
+  if (a1 < 0)
+  {
+    a2 += s * a1;
+    a1 = 0;
+  }
+  else if (a1 > this.c)
+  {
+    Float64 d = a1 - this.c;
+    a2 += s * d;
+    a1 = this.c;
+  }
+
+
+  // Update threshold (bias) to reflect change in Lagrange multipliers
+  Float64 b1 = 0, b2 = 0, new_b = 0, delta_b;
+  if (a1 > 0 && a1 < this.c)
+  {
+    // a1 is not at bounds
+    new_b = e1 + y1 * (a1 - alph1) * k11 + y2 * (a2 - alph2) * k12 + this.bias;
+  }
+  else
+  {
+    if (a2 > 0 && a2 < this.c)
+    {
+      // a1 is at bounds but a2 is not.
+      new_b = e2 + y1 * (a1 - alph1) * k12 + y2 * (a2 - alph2) * k22 + this.bias;
+    }
+    else
+    {
+      // Both new Lagrange multipliers are at bound. SMO algorithm
+      // chooses the threshold to be halfway in between b1 and b2.
+      b1 = e1 + y1 * (a1 - alph1) * k11 + y2 * (a2 - alph2) * k12 + this.bias;
+      b2 = e2 + y1 * (a1 - alph1) * k12 + y2 * (a2 - alph2) * k22 + this.bias;
+      new_b = (b1 + b2) / 2.0;
+    }
+  }
+
+  delta_b = new_b - this.bias;
+  this.bias = new_b;
+
+  // Update error cache using new Lagrange multipliers
+  Float64 t1 = y1 * (a1 - alph1);
+  Float64 t2 = y2 * (a2 - alph2);
+  for (SInt32 i = 0; i < this.inputs.size(); i++)
+  {
+    if (0 < this.alpha[i] && this.alpha[i] < this.c)
+    {
+      Float64 point[] = this.inputs[i];
+      this.errors[i] += t1 * this.machine.func(p1, point) +
+        t2 * this.machine.func(p2, point) - delta_b;
+    }
+  }
+
+  this.errors[i1] = 0.0;
+  this.errors[i2] = 0.0;
+
+  // Update lagrange multipliers
+  this.alpha[i1] = a1;
+  this.alpha[i2] = a2;
+
+  return true;
+}
+
+// Computes the SVM output for a given point. 
+inline Float64 MkSVMSMO.compute!(Float64 point[]) {
+
+  Float64 sum = - this.bias;
+  for (SInt32 i = 0; i < this.inputs.size(); i++)
+  {
+    if (this.alpha[i] > 0)
+      sum += this.alpha[i] * this.outputs[i] * this.machine.func(this.inputs[i], point);
+  }
+
+  return sum;
+}
+
+// Compute initial value for C as the number of examples
+// divided by the trace of the input sample kernel matrix.
+inline Float64 MkSVMSMO.computeComplexity!() {
+  Float64 sum = 0.0;
+  for (SInt32 i = 0; i < this.inputs.size(); i++)
+    sum += this.machine.func(this.inputs[i], this.inputs[i]);
+  return this.inputs.size() / sum;
+}
+
+operator RunTest<<<i>>>(
+  io Ref<MkSVMSMO> me_smo,
+  io SInt32 cumul) 
+{
+  cumul += me_smo.examineExample(i);
+}
+
+operator RunTest2<<<i>>>(
+  io Ref<MkSVMSMO> me_smo,
+  io SInt32 cumul) 
+{
+  if (me_smo.alpha[i] != 0 && me_smo.alpha[i] != me_smo.c)
+    cumul += me_smo.examineExample(i);
+}
+
+// Runs the SMO algorithm.
+// True to compute error after the training process completes, false otherwise. Default is true.
+// Retrun the misclassification error rate ofthe resulting support vector machine.
+// The SMO algorithm chooses to solve the smallest possible optimization problem
+// at every step. At every step, SMO chooses two Lagrange multipliers to jointly
+// optimize, finds the optimal values for these multipliers, and updates the SVM
+// to reflect the new optimal values
+// Reference: http://research.microsoft.com/en-us/um/people/jplatt/smoTR.pdf
+function Float64 MkSVMSMO.run!(Boolean compute_error) {
+
+
+  UInt64 start = getCurrentTicks();
+
+  // Initialize variables
+  SInt32 N = this.inputs.size();
+
+  //if (this.use_complexity_heuristic)
+    this.c = this.computeComplexity();
+
+  // Lagrange multipliers
+  this.alpha.resize(N);
+  // Error cache
+  this.errors.resize(N);
+
+  report("run 1" + this.c);
+
+
+  // Algorithm:
+  Index offset = 0;
+  SInt32 num_changed = 0;
+  SInt32 examine_all = 1;
+  while (num_changed > 0 || examine_all > 0)
+  {
+    num_changed = 0;
+    // loop I over all training examples
+    if (examine_all > 0)
+    {
+      RunTest<<<N>>>(this, num_changed);
+      //for (SInt32 i = 0; i < N; i++)
+      //  num_changed += this.examineExample(i);
+    }
+    
+    // loop I over examples where alpha is not 0 and not C
+    else
+    {
+      RunTest2<<<N>>>(this, num_changed);
+      //for (SInt32 i = 0; i < N; i++)
+      //  if (this.alpha[i] != 0 && this.alpha[i] != this.c)
+      //    num_changed += this.examineExample(i);
+    }
+
+    report("offset " + offset);
+    offset ++;
+    if (examine_all == 1)
+      examine_all = 0;
+    else if (num_changed == 0)
+      examine_all = 1;
+  }
+
+  report("run 2");
+
+
+  // Store Support Vectors in the SV Machine. Only vectors which have lagrange multipliers
+  // greater than zero will be stored as only those are actually required during evaluation.
+  SInt32 indices[]; // = new List<SInt32>();
+  for (SInt32 i = 0; i < N; i++)
+  {
+    // Only store vectors with multipliers > 0
+    if (this.alpha[i] > 0) indices.push(i);
+  }
+
+  SInt32 index = indices.size();
+  this.machine.resize(index);
+  for (SInt32 i = 0; i < index; i++)
+  {
+    SInt32 j = indices[i];
+    this.machine.setSupportVectors(i, this.inputs[j]);
+    this.machine.setWeights(i, this.alpha[j] * this.outputs[j]);
+  }
+  this.machine.setThreshold(-this.bias);
+
+  report("run 3");
+
+  Float32 te = Float32(getSecondsBetweenTicks(start,  getCurrentTicks()));
+  
+  report("te " + te);
+  // Compute error if required.
+  return (compute_error) ? this.computeError(this.inputs, this.outputs) : 0.0;
+}
+
+// Runs the SMO algorithm.
+// Return The misclassification error rate of the resulting support vector machine.
+function Float64 MkSVMSMO.run!() {
+  return this.run(true);
+}
+ 
+ 

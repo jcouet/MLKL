@@ -1,0 +1,676 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require Util, FileIO, MLKL; 
+
+/**
+  The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
+  It provides access to the higher level reader objects such as the AlembicXformReader.
+  \example
+
+  require MLKL;
+
+  operator entry() {}
+
+  \endexample
+*/
+
+/**************************************************************************************************/
+/*                                          Activation functions                                  */
+const Index max_str_length = 18;
+
+// Struct to temporary hold the layers' parameters
+struct MkCNNLayerParams {
+  String name;
+  Float32 epsW;
+  Float32 epsB;
+  Float32 momW;
+  Float32 momB;
+  Float32 wc;
+};
+
+function MkCNNLayerParams() {
+  this.name = "";
+  this.epsW = 0.0;
+  this.epsB = 0.0;
+  this.momW = 0.0;
+  this.momB = 0.0;
+  this.wc = 0.0;
+}
+
+/// Parse the layers configuration parameter relative to the neuron function
+inline Boolean ParseNeuron(String line, io SInt32 neuron){
+  if(line == "id") { 
+    neuron = MK_NEURON_ID; 
+    return true; 
+  }
+  else if(line == "sig") { 
+    neuron = MK_NEURON_SIG; 
+    return true; 
+  }
+  else if(line == "relu") {
+    neuron = MK_NEURON_RELU; 
+    return true; 
+  }
+  else if(line == "tanh") { 
+    neuron = MK_NEURON_TANH; 
+    return true; 
+  }
+  else return false;
+}
+
+/// Parse a string input
+inline String ParseStr(String template, String line) {
+  return line.subString(line.find(template) + String(template).length(), line.length());
+}
+
+/// Parse a interger input
+inline SInt32 ParseInt(String template, String line) {
+  String str = ParseStr(template, line);
+  return SInt32(str.toInteger());
+}
+
+/// Parse a scalar input
+inline Float32 ParseScalar(String template, String line) {
+  String str = ParseStr(template, line);
+  return Float32(str.toScalar());
+}
+ 
+/// Check a interger input parameter
+inline Boolean CheckInt(String name,, SInt32 val) {
+  if(val < 0) {
+    report("Error : parameters \"" + name + "\" is not set, add #" + name + "=val");
+    return false;
+  }
+  return true;
+}
+
+/// Check a scalar input parameter
+inline Boolean CheckScalar(String name, Float32 val) {
+  if(val < 0) {
+    report("Error : parameters \"" + name + "\" is not set, add #" + name + "=val");
+    return false;
+  }
+  return true;
+}
+
+/// Check a path input parameter
+inline Boolean CheckPath(String name, String path) {
+  if(!FilePath(path).exists() || (path.length == 0) ) {
+    report("Error : parameters \"" + name + "\" path " + path + " doesn't exist");
+    return false;
+  }
+  return true;
+}
+
+/// Return astring with a constante lenght
+inline String toConstLenght(String string) {
+  String space;
+  return String(string + space.whiteSpace(max_str_length - string.length()));
+}
+
+/// Parse the layers configuration and create them
+inline Boolean ParseLayerPooling(String name, io TextReader reader, io MkCNNLayer layers[]) {
+  
+  SInt32 pool = -1;
+  SInt32 neuron = -1;
+  SInt32 filters = -1;
+  SInt32 in_channels = -1;
+  SInt32 pooling_size = -1;
+  Float32 init_w = -1.0;
+  Float32 init_b = -1.0;
+
+  String line = reader.readLine();
+  while(line.length == 0) line = reader.readLine();
+
+  while(line.length > 0) 
+  { 
+    if(line.find("pool=") > -1) {
+      String str = ParseStr("pool=", line);
+      pool = (str == "avg") ? 0 : (str == "max") ? 1 : -1;
+    }
+    else if(line.find("neuron=") > -1) ParseNeuron(ParseStr("neuron=", line), neuron);
+    else if(line.find("filters=") > -1) filters = ParseInt("filters=", line);   
+    else if(line.find("inChannels=") > -1) in_channels = ParseInt("inChannels=", line);     
+    else if(line.find("poolingSize=") > -1) pooling_size = ParseInt("poolingSize=", line);     
+    else if(line.find("initW=") > -1) init_w = ParseScalar("initW=", line);       
+    else if(line.find("initB=") > -1) init_b = ParseScalar("initB=", line);       
+    line = reader.readLine();
+    while(line[0] == "#") line = reader.readLine();
+  }
+ 
+  report("\n--- Pooling " + name + " ---");
+
+  if(!CheckInt("filters", filters)) return false;
+  else if(!CheckInt("pool", pool)) return false;
+  else if(!CheckInt("neuron", neuron)) return false;
+  else if(!CheckInt("inChannels", in_channels)) return false;
+  else if(!CheckInt("poolingSize", pooling_size)) return false;
+  else {
+    String pool_temp = (pool == 0) ? "avg" : "max";
+    report("pool        : " + pool_temp);
+    report("neuron      : " + MkCNNNeuronModeAsStr(neuron));
+    report("inSize      : " + filters);
+    report("inChannels  : " + in_channels);
+    report("poolingSize : " + pooling_size);
+    report("initW       : " + init_w);
+    report("initB       : " + init_b);
+
+    if(pool == 0)
+      layers.push(MkCNNLayerAveragePooling(
+        name, neuron, filters, filters,  
+        in_channels, pooling_size, init_w, init_b));
+    else
+      layers.push(MkCNNLayerMaxPooling(
+        name, neuron, filters, filters,  
+        in_channels, pooling_size, init_w, init_b));
+
+    return true;
+  }
+}
+
+/// Parse the layers configuration and create them
+inline Boolean ParseLayerConvolutional(String name, MkCNNLayerParams param, io TextReader reader, io MkCNNLayer layers[]) {
+  
+  SInt32 neuron = -1; 
+  SInt32 filters = -1; 
+  SInt32 in_channels = -1;
+  SInt32 filter_size = -1; 
+  SInt32 out_channels = -1;
+  Float32 init_w = -1.0;
+  Float32 init_b = -1.0; 
+  
+  String line = reader.readLine();
+  while(line.length == 0) line = reader.readLine();
+
+  while(line.length > 0) 
+  { 
+
+    if(line.find("neuron=") > -1)  ParseNeuron(ParseStr("neuron=", line), neuron);
+    else if(line.find("filters=") > -1) filters = ParseInt("filters=", line);
+    else if(line.find("filterSize=") > -1) filter_size = ParseInt("filterSize=", line);
+    else if(line.find("inChannels=") > -1) in_channels = ParseInt("inChannels=", line);
+    else if(line.find("outChannels=") > -1) out_channels = ParseInt("outChannels=", line);
+    else if(line.find("initW=") > -1) init_w = ParseScalar("initW=", line);
+    else if(line.find("initB=") > -1) init_b = ParseScalar("initB=", line);
+    
+    line = reader.readLine();
+    while(line[0] == "#") line = reader.readLine();
+  }
+
+  report("\n--- Convolutional " + name + " ---");
+  
+  if(!CheckInt("filters", filters)) return false;
+  else if(!CheckInt("filterSize", filter_size)) return false;
+  else if(!CheckInt("neuron", neuron)) return false;
+  else if(!CheckInt("inChannels", in_channels)) return false;
+  else if(!CheckInt("outChannels", out_channels)) return false;
+  else {
+    report("neuron      : " + toConstLenght(MkCNNNeuronModeAsStr(neuron)) + "epsW : " + param.epsW);
+    report("filters     : " + toConstLenght(String(filters))      + "epsB : " + param.epsB);
+    report("filterSize  : " + toConstLenght(String(filter_size))  + "momW : " + param.momW);
+    report("inChannels  : " + toConstLenght(String(in_channels))  + "momB : " + param.momB);
+    report("outChannels : " + toConstLenght(String(out_channels)) + "wc   : " + param.wc);
+    report("initW       : " + init_w);
+    report("initB       : " + init_b);
+
+    layers.push(MkCNNLayerConvolutional(
+      name, neuron,
+      filters, filters, filter_size,  
+      in_channels, out_channels, init_w, init_b));
+
+    return true;
+  }
+}
+
+/// Parse the layers configuration and create them
+inline Boolean ParseLayerFully(String name, MkCNNLayerParams param, io TextReader reader, io MkCNNLayer layers[]) {
+  SInt32 neuron = -1;
+  SInt32 in_channels = -1;
+  SInt32 out_channels = -1;
+  Float32 init_w = -1.0;
+  Float32 init_b = -1.0;;
+
+  String line = reader.readLine();
+  while(line.length == 0) line = reader.readLine();
+  
+  while(line.length > 0) 
+  {
+    if(line.find("neuron=") > -1) ParseNeuron(ParseStr("neuron=", line), neuron);
+    else if(line.find("inChannels=") > -1) in_channels = ParseInt("inChannels=", line);
+    else if(line.find("outChannels=") > -1) out_channels = ParseInt("outChannels=", line);
+    else if(line.find("initW=") > -1) init_w = ParseScalar("initW=", line);
+    else if(line.find("initB=") > -1) init_b = ParseScalar("initB=", line);
+    line = reader.readLine();
+    while(line[0] == "#") line = reader.readLine();
+  }
+
+  report("\n--- Fully-Connected " + name + " ---");
+  
+  if(!CheckInt("neuron", neuron)) return false;
+  else if(!CheckInt("inChannels", in_channels)) return false;
+  else if(!CheckInt("outChannels", out_channels)) return false;
+  else {
+    report("neuron      : " + toConstLenght(MkCNNNeuronModeAsStr(neuron)) + "epsW : " + param.epsW);
+    report("inChannels  : " + toConstLenght(String(in_channels))   + "epsB : " + param.epsB);
+    report("outChannels : " + toConstLenght(String(out_channels))  + "momW : " + param.momW);
+    report("initW       : " + toConstLenght(String(init_w))        + "momB : " + param.momB);
+    report("initB       : " + toConstLenght(String(init_b))        + "wc   : " + param.wc);
+
+    layers.push(MkCNNLayerFully(name, neuron, in_channels, out_channels, init_w, init_b));
+    return true;
+  }
+}
+
+/// Parse the layers configuration file.
+/// Configure each layer and create them.
+inline Boolean ParseLayersDefs(String path, MkCNNLayerParams params[], io MkCNNLayer layers[]) {
+  TextReader reader();
+
+  if(!reader.open(path)) 
+  {
+    report("Error : Cannot open \"" + path + "\"");
+    return false;
+  }
+
+  while(!reader.eof()) 
+  {
+    String line = reader.readLine();
+
+    if(line.length > 0)  
+    {
+      // Pass comment
+      while(line[0] == "#") line = reader.readLine();
+
+      // If we hit a new layer
+      if(line[0] == "[")
+      {
+        String name = line;
+        String layer_type = reader.readLine();
+
+        // If there is MkCNNLayerParams associated with this layer, get it back
+        MkCNNLayerParams param;
+        for(SInt32 p=0; p<params.size(); ++p) { 
+          if(params[p].name == name)
+            param = params[p];
+        }
+       
+        // Configure the layer depending of its type
+        if(layer_type == "type=pool") {
+          if(!ParseLayerPooling(name, reader, layers)) 
+            return false;
+        }
+
+        else if(layer_type == "type=conv") {
+          if(!ParseLayerConvolutional(name, param, reader, layers)) 
+            return false;
+        }
+        else if(layer_type == "type=fc") {
+          if(!ParseLayerFully(name, param, reader, layers)) 
+            return false;
+        }
+      }
+    }
+  }
+
+  return reader.close();
+}
+
+/// Parse the layers parameters
+inline Boolean ParseLayersParams(String path, io MkCNNLayerParams params[], io MkCNNLayer layers[]) {
+  TextReader reader();
+
+  if(!reader.open(path)) 
+  {
+    report("Error : Cannot open \"" + path + "\"");
+    return false;
+  }
+
+  while(!reader.eof()) 
+  {
+    MkCNNLayerParams param;
+    String line = reader.readLine();
+
+    if(line.length > 0)  
+    {
+      // Pass comment
+      while(line[0] == "#") line = reader.readLine();
+    
+      // If we hit a new layer
+      if(line[0] == "[")
+      {
+        param.name = line;
+        line = reader.readLine();
+        while(line.length > 0)
+        {
+          if(line.find("epsW=") > -1) param.epsW = ParseScalar("epsW=", line);
+        
+          if(line.find("epsB=") > -1) param.epsB = ParseScalar("epsB=", line);
+       
+          if(line.find("momW=") > -1) param.momW = ParseScalar("momW=", line);
+        
+          if(line.find("momB=") > -1) param.momB = ParseScalar("momB=", line);
+          
+          if(line.find("wc=") > -1) param.wc = ParseScalar("wc=", line);
+          
+          line = reader.readLine();
+        }
+
+        if(!CheckScalar("epsW", param.epsW)) return false;
+
+        else if(!CheckScalar("epsB", param.epsB)) return false;
+
+        else if(!CheckScalar("momW", param.momW)) return false;
+
+        else if(!CheckScalar("momB", param.momB)) return false;
+
+        else if(!CheckScalar("wc", param.wc)) return false;
+
+        else
+          params.push(param);
+      }
+    }
+  }
+
+  return reader.close();
+}
+/*                                              Loss functions                                    */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                          Activation functions                                  */
+/// Class for network configuration 
+struct MkCNNConfig {
+  SInt32 worker;
+  SInt32 gpu;
+  SInt32 epoch;
+  SInt32 optimizer;
+  SInt32 batch_size;
+  SInt32 loss_function;
+
+  String layers_defs_path;
+  String layers_params_path;
+  
+  String train_images_path;
+  String test_images_path;
+  String train_labels_path;
+  String test_labels_path;
+
+  SInt32 save;
+  SInt32 auto_saving;
+  String main_save_dir_path;
+  String save_dir_path;
+  String save_file_name;
+  String load_file_path;
+};
+
+function MkCNNConfig() {
+  this.worker = 1;
+  this.gpu = -1;
+  this.epoch = -1;
+  this.optimizer = -1;
+  this.batch_size = -1;
+  this.loss_function = -1;
+  this.save = -1;
+}
+
+/// Parse the network configuration file
+inline Boolean MkCNNConfig.parse!(String path) {
+  TextReader reader();
+
+  if(!reader.open(path))
+    return false;
+ 
+  while(!reader.eof()) 
+  {
+    String line = reader.readLine();
+  
+    if( (line.length() > 0) && line[0] != "#") 
+    {       
+      if(line.find("gpu=") > -1) this.gpu = ParseInt("gpu=", line);  
+      else if(line.find("nbEpoch=") > -1) this.epoch = ParseInt("nbEpoch=", line);  
+
+      else if(line.find("batchSize=") > -1) this.batch_size = ParseInt("batch_size=", line);  
+       
+      else if(line.find("optimizer=") > -1) this.optimizer = ParseInt("optimizer=", line);  
+       
+      else if(line.find("lossFunction=") > -1) this.loss_function = ParseInt("lossFunction=", line);  
+       
+      else if(line.find("layersDefsPath=") > -1) this.layers_defs_path = ParseStr("layersDefsPath=", line); 
+       
+      else if(line.find("layersParamsPath=") > -1) this.layers_params_path = ParseStr("layersParamsPath=", line); 
+       
+      else if(line.find("trainImagesPath=") > -1) this.train_images_path = ParseStr("trainImagesPath=", line); 
+       
+      else if(line.find("testImagesPath=") > -1) this.test_images_path = ParseStr("testImagesPath=", line); 
+
+      else if(line.find("trainLabelsPath=") > -1) this.train_labels_path = ParseStr("trainLabelsPath=", line); 
+       
+      else if(line.find("testLabelsPath=") > -1) this.test_labels_path = ParseStr("testLabelsPath=", line); 
+
+      else if(line.find("autoSaving=") > -1) this.auto_saving = ParseInt("optimizer=", line);  
+
+      else if(line.find("save=") > -1) this.save = ParseInt("save=", line);  
+
+      else if(line.find("saveDirPath=") > -1) this.main_save_dir_path = ParseStr("saveDirPath=", line); 
+
+      else if(line.find("saveFileName=") > -1) this.save_file_name = ParseStr("saveFileName=", line); 
+      
+      else if(line.find("loadFilePath=") > -1) this.load_file_path = ParseStr("loadFilePath=", line); 
+    }
+  }
+
+  if(!CheckInt("gpu", this.gpu)) return false;
+
+  else if(!CheckInt("nbEpochs", this.epoch)) return false;
+
+  else if(!CheckInt("batchSize", this.batch_size)) return false;
+
+  else if(!CheckInt("optimizer", this.optimizer)) return false;
+
+  else if(!CheckInt("lossFunction", this.loss_function)) return false;
+
+  else if(!CheckPath("layersDefsPath", this.layers_defs_path)) return false;
+
+  else if(!CheckPath("layersParamsPath", this.layers_params_path)) return false;
+
+  else if(!CheckPath("trainImagesPath", this.train_images_path)) return false;
+
+  else if(!CheckPath("testImagesPath", this.test_images_path)) return false;
+ 
+  else if(!CheckInt("save", this.save)) return false;
+
+  else if(!CheckPath("saveDirPath", this.main_save_dir_path)) return false;
+ 
+  else {
+    report("1. Network parameters");
+    report("tool*         : " + "train");
+    report("gpu           : " + this.gpu);
+    report("nbEpochs      : " + this.epoch);
+    report("batchSize     : " + this.batch_size);
+    report("optimizer     : " + MkCNNOptimizerModeAsStr(this.optimizer));
+    report("lossFunction  : " + MkCNNLossModeAsStr(this.loss_function));
+    report("\n2. Layer definitions");
+    report("layersDefs    : " + this.layers_defs_path);
+    report("layerParams   : " + this.layers_params_path);
+    report("\n3. Images and labels");
+    report("trainImages   : " + this.train_images_path);
+    report("testImages    : " + this.test_images_path);
+    report("trainLabels*  : " + this.train_labels_path);
+    report("testLabels*   : " + this.test_labels_path);
+    report("\n4. Network saving and loading");
+    report("save*         : " + this.save);
+    report("autoSaving*   : " + this.auto_saving);
+    report("saveDir       : " + this.main_save_dir_path);
+    report("saveFileName* : " + this.save_file_name);   
+    report("loadFilePath* : " + this.load_file_path);     
+  }
+
+  return reader.close();
+}
+
+/// To-Do
+/// Check if the layers inputs and outputs sizes are correct
+inline Boolean MkCNNConfig.check(io MkCNNLayer layers[]) {
+  return true;
+}
+
+/// Create a directory to save the network
+inline Boolean MkCNNConfig.initSaving!() {
+  
+  // Check if the main save folder exist
+  FileSystem file_system;
+  if(!file_system.exists(this.main_save_dir_path)) {
+    report("Error : directory \"saveDirPath\" doesn't exist");
+    return false;
+  }
+
+  // Get back the current time --> Name of the current folder saving
+  String date_time;
+  CurrentDateTime(date_time);
+ 
+  // Create the current saving folder
+  FilePath file_path(this.main_save_dir_path);
+  file_path.append(FilePath(date_time));
+  this.save_dir_path = file_path.string(); 
+  file_system.createDirectory(file_path);
+
+  return true;
+}
+
+/// Configure the whole network form file, incuding the layers
+function Boolean MkCNNConfig.config!(String path, io MkCNNLayer layers[]) {
+
+  report("\n\n\n-------------------- Configuration --------------------");
+  
+  report("\n------------ Network ------------\n");
+  if(!this.parse(path))
+    return false;
+
+  report("\n\n------------ Layers ------------");
+  MkCNNLayerParams layers_params[];
+  if(!ParseLayersParams(this.layers_params_path, layers_params, layers)) return false;
+  if(!ParseLayersDefs(this.layers_defs_path, layers_params, layers)) return false;
+  if(!this.check(layers)) return false;
+
+  if(this.save) return this.initSaving();
+  return true;
+}
+
+/// Save a layer
+inline MkCNNConfig.saveLayer(io TextWriter writer, Ref<MkCNNLayer> layer) {
+  writer.writeLine("\nname=" + layer.name());
+  writer.writeLine("mode="+ layer.modeAsStr());
+  writer.writeLine("w="+ layer.weights());
+  writer.writeLine("b="+ layer.bias());
+}
+
+/// Save the current network's layers
+function Boolean MkCNNConfig.save!(MkCNNLayers layers) {
+
+  // Check if the current saving file exists
+  // If not, create one by default
+  if(this.save_file_name.length() == 0)
+    this.save_file_name = "cnn_network.mlkl";
+
+  FilePath file_path(this.save_dir_path);
+  file_path.append(this.save_file_name);
+ 
+  TextWriter writer();
+  if(!writer.open(file_path.string())) {
+    report("Error : Cannot open \"" + file_path.string() + "\"");
+    return false;
+  }
+
+  for(Index l=0; l<layers.size(); ++l) 
+    this.saveLayer(writer, layers.at(l));
+  
+  return writer.close();
+}
+
+/// Load a layer weigths
+inline MkCNNConfig.load(io TextReader reader, io Ref<MkCNNLayer> layer) {
+  
+  String line = reader.readLine();
+  
+  if(line.find("mode=") > -1) 
+    line = reader.readLine();
+  
+  if(line.find("w=") > -1) {
+    String data = ParseStr("w=", line); 
+    data = data.subString(1, data.length()-2);
+    String datas[] = data.split(",");
+
+    Float64 w[]; w.resize(datas.size());
+    for(Index i=0; i<w.size(); ++i)
+      w[i] = Float64(datas[i].toScalar());
+    layer.weights(w);
+    line = reader.readLine();
+  }
+
+  if(line.find("b=") > -1) {
+    String data = ParseStr("b=", line); 
+    data = data.subString(1, data.length()-2);
+    String datas[] = data.split(",");
+
+    Float64 b[]; b.resize(datas.size());
+    for(Index i=0; i<b.size(); ++i)
+      b[i] = Float64(datas[i].toScalar());
+    layer.bias(b);
+  }
+}
+
+/// Load the current network's layers
+/// Must be used after having configured the network
+function Boolean MkCNNConfig.load(io MkCNNLayers layers) {
+  
+  TextReader reader();
+  if(!reader.open(this.load_file_path))
+    return false;
+  
+  while(!reader.eof()) 
+  {
+    String line = reader.readLine();
+
+    // Pass comment
+    while(line[0] == "#") line = reader.readLine();
+ 
+    // If we hit a new layer
+    if(line.find("name=") > -1)
+    {
+      // Check the name to get the corresponding layer (a pointer on it)
+      String name = ParseStr("name=", line);
+
+      // For now we don't manage the data layer
+      Ref<MkCNNLayer> current_layer = null;
+      if(name != "[data]")
+      {  
+        for(Index l=0; layers.size(); ++l)
+        {
+          if(layers.at(l).name() == name)
+          {
+            current_layer = layers.at(l);
+            break;
+          }
+        }
+      }
+
+      if(current_layer) this.load(reader, current_layer);
+    }
+  }
+
+  return reader.close();
+}
+/*                                              Loss functions                                    */
+/**************************************************************************************************/
+
+ 

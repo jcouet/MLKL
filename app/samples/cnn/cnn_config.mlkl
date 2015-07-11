@@ -1,35 +1,65 @@
-# MLKL Network configuration file
-# this is comment
+### MLKL network configuration  
 
-# Network configuration
-# auto_saving=1 # to save at each epoch
-# tool=train #to train the netweork, tool=predict to get output from network
 
-worker=1
+##############################################################################
+#                
+# 1. Network parameters
+# tool*            : "train" or "predict" 
+# gpu              : GPU (0, 1)       
+# nbEpoch          : Number of epochs
+# batchSize        : Batch size
+# optimizer        : Optimisation (0 : GD, 1 : GDLM)    
+# lossFunction     : Loss funtion (0 : MSE, 1 : CE)     
+#
+# 2. Layer definitions 
+# layersDefsPath   : Path to the layers definition file
+# layersParamsPath : Path to the layers parameters file
+#
+# 3. Images and labels
+# trainImagesPath  : Path of the train images, use for training
+# trainLabelsPath  : Path of the train labels, use for training
+# testImagesPath*  : Path of the test images, use for training
+# testLabelsPath*  : Path of the test labels, use for training
+#
+# 4. Network saving and loading
+# save             : Save the netwok
+# autoSaving*      : Automatically save the network at each epoch (0, 1)
+# saveDirPath      : Path of the network output folder
+# saveFileName*    : Name of the network output file
+# loadFilePath*    : Path of the network file to load
+#
+##############################################################################
+
+
+# 1. Network parameters
+tool=train
 gpu=0
 nbEpoch=2
-batchSize=100
+batchSize=10
 optimizer=1
 lossFunction=0
 
-# Set the layer def et params pathes
+
+# 2. Layer definitions 
 layersDefsPath=C:/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/cnn_layers_def.mlkl
 layersParamsPath=C:/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/cnn_layers_params.mlkl
 
 
-# For CIFAR
+# 3. Images and labels
+# For CIFAR, the same file contains both the image and labels
 trainImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/cifar-10/data_batch_1.bin
 testImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/cifar-10/test_batch.bin
-trainLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-labels.idx1-ubyte
-testLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-labels.idx1-ubyte
 
-# Set the output
-outputDirPath=C:/Users/Julien/Documents/Dev/MLKL/resources/
-
-# Set data pathes
 # For MNIST
+# trainImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-images.idx3-ubyte
+# testImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-images.idx3-ubyte
+# trainLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-labels.idx1-ubyte
+# testLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-labels.idx1-ubyte
 
-#trainImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-images.idx3-ubyte
-#testImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-images.idx3-ubyte
-#trainLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-labels.idx1-ubyte
-#testLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-labels.idx1-ubyte
+
+# 4. Network saving and loading
+save=0
+auto_saving=1
+saveDirPath=C:/Users/Julien/Documents/Dev/MLKL/resources/
+saveFileName=cnn_network.mlkl
+#loadFilePath=C:/Users/Julien/Documents/Dev/MLKL/resources/2015-07-04_18-25-59/res.mlkl

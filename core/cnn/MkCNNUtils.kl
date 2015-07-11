@@ -1,0 +1,336 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require MLKL; 
+
+
+/**************************************************************************************************/
+/*                                                  Config                                        */
+struct MkCNNDefs {
+  Index task_size;
+  Boolean gpu;
+};
+
+function MkCNNDefs() { 
+  this.task_size = 1;
+  this.gpu = true;
+}
+
+function Index MkCNNDefs.taskSize() {
+  return this.task_size;
+}
+
+function Boolean MkCNNDefs.gpu() { 
+  return this.gpu;
+}
+
+function Index MaxIndex(Float64 array[]) {
+  Float64 max_val = 0;
+  Index max_index = 0;
+  for(Index i=0; i<array.size(); ++i)
+  {
+    if(max_val < array[i])
+    {
+      max_val = array[i];
+      max_index = i;
+    }
+  }
+  return max_index;
+}
+/*                                                  Config                                        */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                               Image indexes                                    */
+struct MkCNNIndex3D {
+  Index width;
+  Index height;
+  Index depth;
+};
+
+function MkCNNIndex3D(Index width, Index height, Index depth) {
+  this.width = width; 
+  this.height = height; 
+  this.depth = depth;  
+}
+
+function Index MkCNNIndex3D.index(Index x, Index y, Index channel) {
+  return (this.width * this.height) * channel + this.width * y + x;
+}
+
+function Index MkCNNIndex3D.size() {
+  return this.width * this.height * this.depth;
+}
+/*                                               Image indexes                                    */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                            Layers connection                                   */
+// LAyers connection definition
+struct MkCNNIndexPair {
+  Index first;
+  Index second;
+};
+
+function MkCNNIndexPair(Index first, Index second) {
+  this.first = first;
+  this.second = second;
+}
+
+struct MkCNNConnection { 
+  MkCNNIndexPair pairs[];
+};
+
+function MkCNNConnection() {
+  this.pairs.resize(0);
+}
+
+function MkCNNConnection.push!(MkCNNIndexPair pair) {
+  this.pairs.push(pair);
+}
+
+function Index MkCNNConnection.size() {
+  return this.pairs.size();
+}
+
+function Index MkCNNConnection.empty() {
+  return (this.pairs.size() == 0);
+}
+
+
+// Connection table
+struct MkCNNConnectionTable {
+  Index rows;
+  Index cols;
+  Boolean connected[];
+};
+
+function MkCNNConnectionTable() {
+  this.rows = 0;
+  this.cols = 0;
+  this.connected.resize(0);
+}
+
+function MkCNNConnectionTable(Boolean ar[], Index rows, Index cols) {
+  this.rows = rows;
+  this.cols = cols;
+  this.connected = ar.clone();
+}
+
+function Index MkCNNConnection.first(Index pair_index) {
+  return this.pairs[pair_index].first;
+}
+
+function Index MkCNNConnection.second(Index pair_index) {
+  return this.pairs[pair_index].second;
+}
+
+function MkCNNConnection.first!(Index pair_index, Index first) {
+  this.pairs[pair_index].first = first;
+}
+
+function MkCNNConnection.second!(Index pair_index, Index second) {
+  this.pairs[pair_index].second = second;
+}
+
+function Boolean MkCNNConnectionTable.isConnected(Index i, Index j) {
+  return this.isEmpty() ? true : this.connected[j * this.cols + i];
+}
+
+function Boolean MkCNNConnectionTable.isEmpty() {
+  return this.rows == 0 && this.cols == 0;
+}
+/*                                            Layers connection                                   */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                                 Outputs                                        */
+// Hash table
+struct MkCNNHashTable {
+  Float64 values[];
+};
+
+function MkCNNHashTable() {
+  this.values.resize(0);
+}
+
+function MkCNNHashTable(Float64 values[]) {
+  this.values = values;
+}
+
+function Boolean == (MkCNNHashTable lhs, MkCNNHashTable rhs) {
+  if(lhs.values.size() != rhs.values.size()) 
+    return false;
+
+  for(Index i=0; i<lhs.values.size(); ++i)
+    if(lhs.values[i] != rhs.values[i]) 
+      return false;
+
+  return true;
+}
+
+function MkCNNHashTable.clear!() {
+  this.values.resize(0);
+}
+
+
+// Structure contraining the result of the learning
+struct MkCNNNetworkResult {
+  Index num_success;
+  Index num_total;
+
+  //http://www2.cs.uregina.ca/~dbd/cs831/notes/confusion_matrix/confusion_matrix.html
+  Float64 confusion_matrix[][];
+  //std::map<label_t, std::map<label_t, Inde> > confusion_matrix;
+};
+
+function MkCNNNetworkResult(Index num_success, Index num_total) {
+  this.num_success = num_success;
+  this.num_total = num_total;
+}
+
+function MkCNNNetworkResult() {
+  this.num_success = 0;
+  this.num_total = 0;
+}
+ 
+function Float64 MkCNNNetworkResult.accuracy() {
+  return this.num_success * 100.0 / this.num_total;
+}
+
+function MkCNNNetworkResult.printSummary() {
+  report("accuracy : " + this.accuracy() + "% (" + this.num_success + "/" + this.num_total);
+}
+
+function MkCNNNetworkResult.printDetail() {
+  this.printSummary();
+  /*
+    auto all_labels = labels();
+
+    os << std::setw(5) << "*" << " ";
+    for (auto c : all_labels) 
+        os << std::setw(5) << c << " ";
+    os << std::endl;
+
+    for (auto r : all_labels) {
+        os << std::setw(5) << r << " ";           
+        for (auto c : all_labels) 
+            os << std::setw(5) << confusion_matrix[r][c] << " ";
+        os << std::endl;
+    }
+  }
+
+  std::set<label_t> labels() const {
+    std::set<label_t> all_labels;
+    for (auto r : confusion_matrix) {
+      all_labels.insert(r.first);
+      for (auto c : r.second)
+        all_labels.insert(c.first);
+    }
+    return all_labels;
+  }
+  */
+}
+
+
+// Display iteration info 
+struct MkCNNEnumBatch {
+  Index counter;        // To update the display
+  Index training_size;  // Number of training images    
+  Index current_size;   // Current image
+  Index batch_size;     // Batch size
+};
+
+/// Constructor
+function MkCNNEnumBatch(Index training_size, Index batch_size) {
+  report("\n\n\n\n-------------------- Training --------------------");
+  this.training_size = training_size;
+  this.batch_size = batch_size;
+  this.current_size = 0;
+}
+
+/// Reset the info
+function MkCNNEnumBatch.reset!(Index ite, Index nb_epoch) {
+  report("\n------------ Epoch " + Index(ite+1) + "/" + nb_epoch + " ------------\n");
+  this.counter = 0;
+  this.current_size = 0;
+  this.display();
+}
+
+/// Display the current percentage of computation
+function MkCNNEnumBatch.display() {
+  Float32 percent = 100.0 * this.batch_size * Float32(this.current_size) / Float32(this.training_size); 
+  ReportR("Train         : " + Index(percent) + "%");
+}
+
+/// Update the iteration info and display it
+function MkCNNEnumBatch.update!() {
+  this.current_size++;
+  this.counter ++;
+
+  // We don't want to write too much in the console.
+  // Depending on the batch size, this function can be called really often
+  if(this.counter == 50) {
+    this.counter = 0;
+    this.display();
+  }
+}
+
+
+/// Structure to display epoch info 
+struct MkCNNEnumEpoch {
+  UInt64 start;                 // To compute the procesing time
+  Float64 learning_rate_decay;  // Update the optimizer learning rate
+};
+
+/// Desfault constructor, set the learning rate to 0.85
+function MkCNNEnumEpoch() {
+  this.start = getCurrentTicks();
+  this.learning_rate_decay = 0.85;
+}
+
+/// Constructor
+function MkCNNEnumEpoch(Float64 learning_rate_decay) {
+  this.start = getCurrentTicks();
+  this.learning_rate_decay = learning_rate_decay;
+}
+
+/// Display the epoch info and perfor a test
+function MkCNNEnumEpoch.display(io Ref<MkCNNNetwork> nn, Float64 test_images[][], Index test_labels[]) {
+  report("Train         : 100%");
+  Float32 tim = Float32(getSecondsBetweenTicks(this.start, getCurrentTicks())/60.0);
+  report("Time          : " + tim + " mins");
+  
+  MkCNNNetworkResult res = nn.test(test_images, test_labels);
+  Ref<MkCNNOptimizer> opti = nn.optimizer();
+  report("Learning rate : " + Float32(opti.learningRate()));
+  Float32 succes = 100.0*Float32(res.num_success)/Float32(res.num_total);
+  report("Test          : " + succes + "% succes");
+}
+
+/// Update the epoch info + optimizer
+function MkCNNEnumEpoch.update!(io Ref<MkCNNNetwork> nn, Float64 test_images[][], Index test_labels[]) {
+  // Display the info
+  this.display(nn, test_images, test_labels);
+
+  // Update the optimization learning rate
+  Ref<MkCNNOptimizer> opti = nn.optimizer();
+  opti.learningRate(opti.learningRate()*this.learning_rate_decay);
+  opti.learningRate(Math_max(0.00001, opti.learningRate()));
+  this.start = getCurrentTicks();
+}
+/*                                                 Outputs                                        */
+/**************************************************************************************************/

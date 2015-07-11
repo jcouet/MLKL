@@ -1,0 +1,107 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require MLKL, MkCNNCpp;
+require FileIO, Util, OpenImageIO;
+ 
+/**
+  The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
+  It provides access to the higher level reader objects such as the AlembicXformReader.
+  \example
+
+  require MLKL;
+
+  operator entry() {}
+
+  \endexample
+*/
+
+struct MkCNNData {
+  Index train_labels[];
+  Index test_labels[];
+  Float64 train_images[][];
+  Float64 test_images[][];
+};
+
+inline NormalizeImage(Float64 scale_min, Float64 scale_max, io Float64 image[]) {
+  for(Index j=0; j<image.size(); ++j)
+    image[j] = (255.0 - image[j]) * (scale_max - scale_min) / 255.0 + scale_min;
+}
+
+inline NormalizeImages(Float64 scale_min, Float64 scale_max, io Float64 images[][]) {
+  for(Index i=0; i<images.size(); ++i)
+    NormalizeImage(scale_min, scale_max, images[i]);
+}
+
+public MkCNNData.loadTrainingMNIST!(MkCNNConfig config) {
+  MkCNNCpp mnist();
+  this.train_images = mnist.readImages_MNIST(config.train_images_path, -1.0, 1.0, 2, 2);
+  this.test_images = mnist.readImages_MNIST(config.test_images_path, -1.0, 1.0, 2, 2);
+  this.train_labels = mnist.readLabels_MNIST(config.train_labels_path);
+  this.test_labels = mnist.readLabels_MNIST(config.test_labels_path); 
+}
+
+function Float64[] MkCNNData.loadValidationMNIST!(String path, Float64 scale_min, Float64 scale_max) {
+  
+  OpenImageInput oiio(path);
+  OpenImageSpec spec = oiio.spec();
+  OpenImageTypeDesc desc = OpenImageTypeDesc(OpenImage_BASETYPE_UINT8, OpenImage_AGGREGATE_SCALAR, OpenImage_VECSEMANTICS_NOXFORM);
+
+  Byte bytes[];
+  bytes.resize(spec.get_full_width() * spec.get_full_height() * spec.get_nchannels());
+  
+  Data data = bytes.data();
+  oiio.read_image(desc, data, 0, 0, 0);
+
+  // mnist dataset is "white on black", so negate required
+  Float64 image[];
+  image.resize(spec.get_full_width() * spec.get_full_height());
+  for(Index i=0; i<image.size(); ++i)
+    image[i] = Float64(bytes[3*i]);
+  
+  // Normalize the iamge between 0 and 1
+  NormalizeImage(scale_min, scale_max, image);
+
+  return image;
+}
+
+public MkCNNData.loadTrainingCIFAR!(MkCNNConfig config, Boolean rgb, Float64 scale_min, Float64 scale_max) {
+  MkCNNCpp cifar();
+  cifar.readBatch_CIFAR(config.train_images_path, rgb, this.train_images, this.train_labels);
+  cifar.readBatch_CIFAR(config.test_images_path, rgb, this.test_images, this.test_labels);
+  NormalizeImages(scale_min, scale_max, this.train_images);
+  NormalizeImages(scale_min, scale_max, this.test_images);
+}
+
+public MkCNNData.loadTrainingCIFAR!() {
+  
+  MkCNNCpp cifar();
+  Boolean rgb = false;
+  for(Index p=0; p<5; ++p)
+  {
+    String trainImagesPath = "C:/Users/Julien/Documents/Dev/MLKL/resources/cifar-10/data_batch_" + (p+1) + ".bin";
+    Index train_labels[];
+    Float64 train_images[][];
+    cifar.readBatch_CIFAR(trainImagesPath, rgb, train_images, train_labels);
+
+    for(Index i=0; i<train_images.size(); ++i)
+    {
+      this.train_images.push(train_images[i]);
+      this.train_labels.push(train_labels[i]);
+    }
+  }
+
+  String testImagesPath = "C:/Users/Julien/Documents/Dev/MLKL/resources/cifar-10/test_batch.bin";
+  cifar.readBatch_CIFAR(testImagesPath, rgb, this.test_images, this.test_labels);
+
+  //NormalizeImages(scale_min, scale_max, this.train_images);
+  //NormalizeImages(scale_min, scale_max, this.test_images);
+}
+

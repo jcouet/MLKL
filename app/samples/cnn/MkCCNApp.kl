@@ -18,34 +18,35 @@ operator entry() {
 
   // Load the configuration file and set the network layers
   MkCNNConfig config;
-  MkCNNLayerInterface layers[];
+  MkCNNLayer layers[];
   if(!config.config(path_config, layers))
     return;
 
   // Create the network
-  MkCNNNetwork nn(config.lossFunction(), config.optimizer(), layers);
+  MkCNNNetwork nn(config.loss_function, config.optimizer, layers);
  
   // Set the initiale learning rate
-  Ref<MkCNNOptimizerInterface> opti = nn.optimizer();
+  Ref<MkCNNOptimizer> opti = nn.optimizer();
   nn.optimizer().learningRate(nn.optimizer().learningRate()* sqrt(config.batch_size));
 
   // Declare the enumeration, here we can set the larning rate decay
   // However, it should be set from the file, see Convnet for this
-  MkEnumerateEpoch on_epoch_enumerate(); 
+  MkCNNEnumEpoch epoch_enum(); 
   
   // Load the training data
-  //MkCNNTrainingData training_data = LoadTrainingData_MNIST(config);
-  MkCNNTrainingData training_data = LoadTrainingData_CIFAR(config);
-  report("train_images.size " + training_data.train_images.size());
-  report("train_labels.size " + training_data.train_labels.size());
-  report("tests_images.size " + training_data.test_images.size());
-  report("tests_labels.size " + training_data.test_labels.size());
+  MkCNNData data;
+  //data.loadTrainingMNIST(config);
+  data.loadTrainingCIFAR();
+  report("train_images.size " + data.train_images.size());
+  report("train_labels.size " + data.train_labels.size());
+  report("tests_images.size " + data.test_images.size());
+  report("tests_labels.size " + data.test_labels.size());
  
-  report("training_data.train_images[0] " + training_data.train_images[0]);
+  //report("data.train_images[0] " + data.train_images[0]);
 
   // Train the network
   // The network (the layers' weights) is tested and saved at each epch
-  nn.train(training_data, config, on_epoch_enumerate);
+  nn.train(data, config, epoch_enum);
 
 
   // Finally test it and save it

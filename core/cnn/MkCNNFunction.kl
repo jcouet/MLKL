@@ -1,0 +1,250 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require Math, MLKL; 
+
+/**
+  The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
+  It provides access to the higher level reader objects such as the AlembicXformReader.
+  \example
+
+  require MLKL;
+
+  operator entry() {
+    
+  }
+
+  \endexample
+*/
+
+
+/**************************************************************************************************/
+/*                                              Loss functions                                    */
+const Index MK_LOSS_MSE = 0;
+const Index MK_LOSS_CE = 1;
+ 
+function String MkCNNLossModeAsStr(Index mode) {
+  if(mode == MK_LOSS_MSE) return "MK_LOSS_MSE";    
+  else if(mode == MK_LOSS_CE) return "MK_LOSS_CE";
+  else return "MK_LOSS_UNKNOWN";
+}
+
+/// Interface for loss function 
+interface MkCNNLoss {
+  Float32 f(Float32 y, Float32 t);
+  Float32 df(Float32 y, Float32 t);
+  Index mode();
+  String modeAsStr();
+};
+
+/// Base class for loss function 
+object MkCNNLossBase : MkCNNLoss {
+  protected Index mode; // Mode, use to id the class
+};
+
+/// Return the current mode, either MK_LOSS_CE or MK_LOSS_MSE
+public Index MkCNNLossBase.mode() {
+  return this.mode;
+}
+
+/// Return the current mode as string
+public String MkCNNLossBase.modeAsStr() {
+  return MkCNNLossModeAsStr(this.mode);
+}
+
+/// Return the value of the function at point x
+/// To be overload
+public Float32 MkCNNLossBase.f(Float32 y, Float32 t) {
+  return 0.0;
+}
+
+/// Return the value of the function derivate point x
+/// To be overload
+public Float32 MkCNNLossBase.df(Float32 y, Float32 t) {
+  return 0.0;
+}
+
+
+/// Mean Square error 
+object MkCNNLossMSE : MkCNNLossBase {};
+
+function MkCNNLossMSE() {
+  this.mode = MK_LOSS_MSE;
+}
+
+public Float32 MkCNNLossMSE.f(Float32 y, Float32 t) {
+  return (y - t) * (y - t) / 2.0;
+}
+
+public Float32 MkCNNLossMSE.df(Float32 y, Float32 t) {
+  return y - t;
+}
+
+ 
+/// Cross-Entropy 
+object MkCNNLossCE : MkCNNLossBase {};
+
+function MkCNNLossCE() {
+  this.mode = MK_LOSS_CE;
+}
+
+public Float32 MkCNNLossCE.f(Float32 y, Float32 t) {
+  return -t * log(y) - (1.0 - t) * log(1.0 - y);
+}
+
+public Float32 MkCNNLossCE.df(Float32 y, Float32 t) {
+  return (y - t) / (y * (1 - y));
+}
+/*                                              Loss functions                                    */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                             Neuron functions                                   */
+const Index MK_NEURON_ID = 0;
+const Index MK_NEURON_SIG = 1;
+const Index MK_NEURON_RELU = 2;
+const Index MK_NEURON_TANH = 3;
+ 
+function String MkCNNNeuronModeAsStr(Index mode) {
+  if(mode == MK_NEURON_ID) return "MK_NEURON_ID";
+  else if(mode == MK_NEURON_SIG) return "MK_NEURON_SIG";
+  else if(mode == MK_NEURON_RELU) return "MK_NEURON_RELU";
+  else if(mode == MK_NEURON_TANH) return "MK_NEURON_TANH";
+  else return "MK_NEURONOWN";
+}
+
+/// Interface for activation function 
+interface MkCNNNeuron {
+  Float64 f(Float64 x);
+  Float64 df(Float64 x);
+  Vec2 scale();
+  Index mode();
+  String modeAsStr();
+};
+
+/// Base class for activation function 
+object MkCNNNeuronBase : MkCNNNeuron {
+  protected Index mode; // Mode
+};
+
+/// Return the current mode
+public Index MkCNNNeuronBase.mode() {
+  return this.mode;
+}
+
+/// Return the current mode as string
+public String MkCNNNeuronBase.modeAsStr() {
+  return MkCNNNeuronModeAsStr(this.mode);
+}
+
+/// Return the value of the function at point x
+/// To be overload
+public Float64 MkCNNNeuronBase.f(Float64 x) {
+  return 0.0;
+}
+
+/// Return the value of the function derivate point x
+/// To be overload
+public Float64 MkCNNNeuronBase.df(Float64 x) {
+  return 0.0;
+}
+
+/// Return the current scale
+/// To be overload
+public Vec2 MkCNNNeuronBase.scale() {
+  return Vec2(1.0, 1.0);
+}
+
+
+/// Identity 
+object MkCNNNeuronIdentity : MkCNNNeuronBase {};
+
+function MkCNNNeuronIdentity() {
+  this.mode = MK_NEURON_ID;
+}
+
+public Float64 MkCNNNeuronIdentity.f(Float64 x) {
+  return x;
+}
+
+public Float64 MkCNNNeuronIdentity.df(Float64 x) {
+  return 1;
+}
+
+public Vec2 MkCNNNeuronIdentity.scale() {
+  return Vec2(0.1, 0.9);
+}
+
+
+/// Sigmoid
+object MkCNNNeuronSigmoid : MkCNNNeuronBase {};
+
+function MkCNNNeuronSigmoid() {
+  this.mode = MK_NEURON_SIG;
+}
+
+public Float64 MkCNNNeuronSigmoid.f(Float64 x) {
+  return 1.0 / (1.0 + exp(-x));
+}
+
+public Float64 MkCNNNeuronSigmoid.df(Float64 x) {
+  return x * (1.0 - x);
+}
+
+public Vec2 MkCNNNeuronSigmoid.scale() {
+  return Vec2(0.1, 0.9);
+}
+
+
+/// Linear
+object MkCNNNeuronRectifiedLinear : MkCNNNeuronBase {};
+
+function MkCNNNeuronRectifiedLinear() {
+  this.mode = MK_NEURON_RELU;
+}
+
+public Float64 MkCNNNeuronRectifiedLinear.f(Float64 x) {
+  return Math_max(0.0, x); 
+}
+
+public Float64 MkCNNNeuronRectifiedLinear.df(Float64 x) {
+  return (x > 0.0) ? 1.0 : 0.0;
+}
+
+public Vec2 MkCNNNeuronRectifiedLinear.scale() {
+  return Vec2(0.1, 0.9);
+}
+
+
+/// Tangeante hyperbolic
+object MkCNNNeuronTanH : MkCNNNeuronBase {};
+
+function MkCNNNeuronTanH() {
+  this.mode = MK_NEURON_TANH;
+}
+
+public Float64 MkCNNNeuronTanH.f(Float64 x) {
+  Float64 ep = exp(x);
+  Float64 em = exp(-x); 
+  return (ep - em) / (ep + em);
+}
+
+public Float64 MkCNNNeuronTanH.df(Float64 x) {
+  return 1.0 - x * x;
+}
+
+public Vec2 MkCNNNeuronTanH.scale() {
+  return Vec2(-0.8, 0.8);
+}
+/*                                             Neuron functions                                   */
+/**************************************************************************************************/
+

@@ -1,0 +1,666 @@
+/**************************************************************************************************/
+/*                                                                                                */
+/*  Informations :                                                                                */
+/*      This code is part of the project MLKL                                                     */
+/*                                                                                                */
+/*  Contacts :                                                                                    */
+/*      couet.julien@gmail.com                                                                    */
+/*                                                                                                */
+/**************************************************************************************************/
+
+require MLKL; 
+
+/**
+  The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
+  It provides access to the higher level reader objects such as the AlembicXformReader.
+  \example
+
+  require MLKL;
+
+  operator entry() {
+    
+  }
+
+  \endexample
+*/
+ 
+
+/**************************************************************************************************/
+/*                                         Partial-connected Layer                                */
+/// Class for partially-connected layer 
+object MkCNNLayerPartial : MkCNNLayerBase {
+  protected MkCNNConnection weight2io[]; // weight_id . [(in_id, out_id)]
+  protected MkCNNConnection out2wi[];    // out_id . [(weight_id, in_id)]
+  protected MkCNNConnection in2wo[];     // in_id . [(weight_id, out_id)]
+  protected Index bias2out[][];
+  protected Index out2bias[];
+  protected Float64 scale_factor; 
+};
+ 
+/// Initilisation, called by the contructeurs
+protected MkCNNLayerPartial.init!(
+  String name,
+  Index neuron,
+  Index in_size, 
+  Index out_size, 
+  Index weight_size, 
+  Index bias_size,
+  Float64 scale_factor,
+  Float64 init_w,
+  Float64 init_b) 
+{
+  if (in_size <= 0 || weight_size <= 0 || weight_size <= 0 || bias_size <= 0)
+  {
+    report("Error MkCNNLayerPartial : invalid layer size");
+    return;
+  }
+  this.parent.init(name, neuron, in_size, out_size, weight_size, bias_size, init_w, init_b);
+  
+  this.mode = MK_LAYER_PARTIAL;
+  this.in2wo.resize(in_size);
+  this.out2wi.resize(out_size);
+  this.out2bias.resize(out_size);
+  this.weight2io.resize(weight_size);
+  this.bias2out.resize(bias_size);
+  this.scale_factor = scale_factor;
+}
+
+/// Constructor
+public MkCNNLayerPartial(
+  Index neuron,
+  Index in_size, 
+  Index out_size, 
+  Index weight_size, 
+  Index bias_size,
+  Float64 scale_factor) 
+{
+  this.init("", neuron, in_size, out_size, weight_size, bias_size, scale_factor, -1.0, -1.0);
+}
+
+/// Constructor
+public MkCNNLayerPartial(
+  String name,
+  Index neuron,
+  Index in_size, 
+  Index out_size, 
+  Index weight_size, 
+  Index bias_size,
+  Float64 scale_factor,
+  Float64 init_w,
+  Float64 init_b) 
+{
+  this.init(name, neuron, in_size, out_size, weight_size, bias_size, scale_factor, init_w, init_b);
+}
+
+/// Display the class attributs
+public MkCNNLayerPartial.display() {
+  this.parent.display();
+  report("\nMkCNNLayerPartial Attributs");
+  report("scaleFactor "   + this.scale_factor);
+  report("weight2ioSize " + this.weight2io.size());
+  report("out2wiSize "    + this.out2wi.size());
+  report("in2woSize "     + this.in2wo.size());
+  report("bias2outSize "  + this.bias2out.size());
+  report("out2biasSize "  + this.out2bias.size());
+}
+
+/// Return the total number of no-null connections
+public Index MkCNNLayerPartial.paramSize() {
+  Index total_param = 0;
+  for (Index i=0; i<this.weight2io.size(); ++i)
+    if (this.weight2io[i].size() > 0) 
+      total_param ++;
+
+  for (Index i=0; i<this.bias2out.size(); ++i)
+    if (this.bias2out[i].size() > 0) 
+      total_param ++;
+
+  return total_param;
+}
+
+/// Return the total number of parameters connections
+public Index MkCNNLayerPartial.connectionSize() {
+  Index total_size = 0;
+  for (Index i=0; i<this.weight2io.size(); ++i) 
+    total_size += this.weight2io[i].size();
+
+  for (Index i=0; i<this.bias2out.size(); ++i) 
+    total_size += this.bias2out[i].size();
+
+  return total_size;
+}
+
+/// Return
+public Index MkCNNLayerPartial.fanInSize() {
+  return this.out2wi[0].size();
+}
+
+/// 
+protected MkCNNLayerPartial.connectWeight!(Index input_index, Index output_index, Index weight_index) {
+  this.weight2io[weight_index].push(MkCNNIndexPair(input_index, output_index));
+  this.out2wi[output_index].push(MkCNNIndexPair(weight_index, input_index));
+  this.in2wo[input_index].push(MkCNNIndexPair(weight_index, output_index));
+}
+
+protected MkCNNLayerPartial.connectBias!(Index bias_index, Index output_index) {
+  this.out2bias[output_index] = bias_index;
+  this.bias2out[bias_index].push(output_index);
+}
+
+/// Remove unused weight to improve cache hits
+protected MkCNNLayerPartial.remap!() {
+  
+  SInt32 swaps[Index];
+
+  Index n = 0;
+  for (Index i=0; i<this.weight2io.size(); i++)
+    swaps[i] = this.weight2io[i].empty() ? -1 : n++;
+
+  for (Index i=0; i<this.out_size; i++) 
+    for (Index j=0; j<this.out2wi[i].size(); j++)
+      this.out2wi[i].first(j, Index(swaps[this.out2wi[i].first(j)]));
+
+  for (Index i=0; i<this.in_size; i++) 
+    for (Index j=0; j<this.in2wo[i].size(); j++)
+      this.in2wo[i].first(j, Index(swaps[this.in2wo[i].first(j)]));
+
+  MkCNNConnection weight2io_new[]; weight2io_new.resize(n);
+  for (Index i=0; i<this.weight2io.size(); i++)
+    if(swaps[i] >= 0) 
+      weight2io_new[swaps[i]] = this.weight2io[i];
+
+  this.weight2io = weight2io_new.clone();
+}
+
+/// Parallalized task for Forward propagation
+operator MkCNNLayerPartialFprop_task<<<i>>>(
+  Float64 scale_factor,
+  Ref<MkCNNNeuron> h,
+  MkCNNConnection out2wi[],
+  Float64 w[],
+  Float64 b[],
+  Index out2bias[],
+  Float64 ins[],
+  io Float64 output[]) 
+{
+  Float64 a = 0.0;
+  MkCNNIndexPair pairs[] = out2wi[i].pairs;
+  for (Index j=0; j<pairs.size(); ++j)  
+    a += w[pairs[j].first] * ins[pairs[j].second];  
+  a = a*scale_factor + b[out2bias[i]];
+  output[i] = h.f(a);  
+}
+
+/// Forward propagation
+public Float64[] MkCNNLayerPartial.fprop!(Float64 ins[], Index index) {
+  
+  Ref<MkCNNNeuron> h = this.neuron();
+  MkCNNConnection out2wi[] = this.out2wi;
+  Float64 scale_factor = this.scale_factor;
+  Index out2bias[] = this.out2bias;
+  Float64 w[] = this.w;
+  Float64 b[] = this.b;
+  Float64 output[] = this.output[index];
+ 
+  MkCNNLayerPartialFprop_task<<<this.out_size>>>(
+    scale_factor, 
+    h,
+    out2wi,
+    w,
+    b,
+    out2bias,
+    ins,
+    output);
+
+  return (this.next() != null) ? this.next().fprop(this.output[index], index) : this.output[index]; 
+}
+
+/// Parallalized task for Backward propagation
+operator MkCNNLayerPartialBprop_task_1<<<i>>>(
+  Float64 scale_factor,
+  Ref<MkCNNNeuron> prev_h,
+  MkCNNConnection in2wo[],
+  Float64 prev_out[],
+  Float64 w[],
+  Float64 current_delta[],
+  io Float64 prev_delta[]) 
+{
+  Float64 delta = 0.0;
+  MkCNNIndexPair pairs[] = in2wo[i].pairs;
+  for (Index o=0; o<pairs.size(); ++o)
+    delta += w[pairs[o].first] * current_delta[pairs[o].second];  
+  prev_delta[i] = delta * scale_factor * prev_h.df(prev_out[i]);  
+}
+
+/// Parallalized task for Backward propagation
+operator MkCNNLayerPartialBprop_task_2<<<i>>>(
+  Float64 scale_factor,
+  MkCNNConnection weight2io[],
+  Float64 prev_out[],
+  Float64 current_delta[],
+  io Float64 dw[]) 
+{
+  Float64 diff = 0.0;
+  MkCNNIndexPair pairs[] = weight2io[i].pairs;
+  for (Index o=0; o<pairs.size(); ++o)
+    diff += prev_out[pairs[o].first] * current_delta[pairs[o].second];
+  dw[i] += diff * scale_factor;
+}
+
+/// Backward propagation 
+public Float64[] MkCNNLayerPartial.bprop!(Float64 current_delta[], Index index) {
+
+  Ref<MkCNNNeuron> prev_h = this.prev().neuron();
+  Float64 scale_factor = this.scale_factor;
+  MkCNNConnection in2wo[] = this.in2wo;
+  MkCNNConnection weight2io[] = this.weight2io;
+  Float64 w[] = this.w;
+  Float64 dw[] = this.dw[index];
+  Float64 prev_output[] = this.prev().output(index);
+  Float64 prev_delta[] = this.prev_delta[index];
+
+  MkCNNLayerPartialBprop_task_1<<<this.in_size>>>(
+    scale_factor, 
+    prev_h,
+    in2wo,
+    prev_output,
+    w,
+    current_delta, 
+    prev_delta);
+  
+  MkCNNLayerPartialBprop_task_2<<<this.weight2io.size()>>>(
+    scale_factor,
+    weight2io, 
+    prev_output,
+    current_delta, 
+    dw);
+ 
+  for (Index i = 0; i < this.bias2out.size(); i++) 
+  {
+    Float64 diff = 0.0;
+    for (Index o = 0; o<this.bias2out[i].size(); ++o)
+      diff += current_delta[this.bias2out[i][o]];    
+    this.db[index][i] += diff;
+  } 
+
+  return this.prev().bprop(this.prev_delta[index], index);
+}
+
+/// Parallalized task for 2nd Backward propagation
+operator MkCNNLayerPartialBprop2nd_task_1<<<i>>>(
+  Float64 scale_factor,
+  MkCNNConnection weight2io[],
+  Float64 prev_out[],
+  Float64 current_delta2[],
+  io Float64 w_hessian[]) 
+{
+  Float64 diff = 0.0;
+  MkCNNIndexPair pairs[] = weight2io[i].pairs;
+  for(Index c=0; c<pairs.size(); ++c) 
+    diff += prev_out[pairs[c].first] * prev_out[pairs[c].first] * current_delta2[pairs[c].second];
+  diff *= scale_factor * scale_factor;
+  w_hessian[i] += diff;
+}
+
+/// Parallalized task for 2nd Backward propagation
+operator MkCNNLayerPartialBprop2nd_task_2<<<i>>>(
+  Float64 scale_factor,
+  Ref<MkCNNNeuron> prev_h,
+  Float64 w[],
+  MkCNNConnection in2wo[],
+  Float64 prev_out[],
+  Float64 current_delta2[],
+  io Float64 prev_delta2[]) 
+{
+  prev_delta2[i] = 0.0;
+  MkCNNIndexPair pairs[] = in2wo[i].pairs;
+  for(Index c=0; c<pairs.size(); ++c) 
+    prev_delta2[i] += w[pairs[c].first] * w[pairs[c].first] * current_delta2[pairs[c].second];
+  prev_delta2[i] *= scale_factor * scale_factor * prev_h.df(prev_out[i]) * prev_h.df(prev_out[i]);
+}
+ 
+/// 2nd Backward propagation 
+public Float64[] MkCNNLayerPartial.bprop2nd!(Float64 current_delta2[]) {
+   
+  Ref<MkCNNNeuron> prev_h = this.prev().neuron();
+  Float64 scale_factor = this.scale_factor;
+  MkCNNConnection in2wo[] = this.in2wo;
+  MkCNNConnection weight2io[] = this.weight2io;
+  Float64 w[] = this.w;
+  Float64 w_hessian[] = this.w_hessian;
+  Float64 prev_output[] = this.prev().output(0);
+  Float64 prev_delta2[] = this.prev_delta2;
+  
+  MkCNNLayerPartialBprop2nd_task_1<<<this.weight2io.size()>>>(
+    scale_factor, 
+    weight2io,
+    prev_output, 
+    current_delta2,
+    w_hessian);
+
+  MkCNNLayerPartialBprop2nd_task_2<<<this.in_size>>>(
+    scale_factor, 
+    prev_h,
+    w,
+    in2wo,
+    prev_output, 
+    current_delta2,
+    prev_delta2);
+
+  for (Index i=0; i<this.bias2out.size(); i++) 
+  {
+    Float64 diff = 0.0;
+    for (Index c=0; c<this.bias2out[i].size(); ++c) 
+      diff += current_delta2[this.bias2out[i][c]];    
+    this.b_hessian[i] += diff;
+  }
+
+  return this.prev().bprop2nd(this.prev_delta2);
+}
+/*                                         Partial-connected Layer                                */
+/**************************************************************************************************/
+
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                          Average-pooling Layer                                 */
+/// Class for average-pooling layer 
+object MkCNNLayerAveragePooling : MkCNNLayerPartial {
+  private MkCNNIndex3D ins;
+  private MkCNNIndex3D outs;
+};
+
+/// Connect the kernels
+private MkCNNLayerAveragePooling.connectKernel!(
+  Index pooling_size, 
+  Index i, 
+  Index j, 
+  Index c) 
+{
+  for (Index jj = 0; jj < pooling_size; jj++)
+    for (Index ii = 0; ii < pooling_size; ii++)
+      this.connectWeight(
+        this.ins.index(i + ii, j + jj, c), 
+        this.outs.index(i / pooling_size, j / pooling_size, c),
+        c);
+}
+
+/// Set the kernel connections
+private MkCNNLayerAveragePooling.initConnection!(Index pooling_size) {
+
+  for (Index c = 0; c < this.ins.depth; c++) 
+    for (Index j = 0; j < this.ins.height; j += pooling_size)
+      for (Index i = 0; i < this.ins.width; i += pooling_size)
+        this.connectKernel(pooling_size, i, j, c);
+
+  for (Index c = 0; c < this.ins.depth; c++) 
+    for (Index j = 0; j < this.outs.height; j++)
+      for (Index i = 0; i < this.outs.width; i++)
+        this.connectBias(c, this.outs.index(i, j, c));
+}
+
+/// Constructor
+public MkCNNLayerAveragePooling.init!(
+  String name,
+  Index neuron,
+  Index in_width,
+  Index in_height, 
+  Index in_channels, 
+  Index pooling_size,
+  Float64 init_w,
+  Float64 init_b) 
+{
+  if ((in_width % pooling_size) || (in_height % pooling_size)) 
+  {
+    report("Error MkCNNLayerAveragePooling : width/height must be multiples of pooling size");
+    return;
+  }
+
+  this.parent.init(
+    name, 
+    neuron, 
+    in_width*in_height*in_channels, 
+    in_width*in_height*in_channels / (pooling_size*pooling_size), 
+    in_channels, 
+    in_channels,
+    1.0 / (pooling_size*pooling_size),
+    init_w, init_b);
+  
+  this.mode = MK_LAYER_AVERAGE_POOLING;
+  this.ins = MkCNNIndex3D(in_width, in_height, in_channels);
+  this.outs = MkCNNIndex3D(in_width/pooling_size, in_height/pooling_size, in_channels);
+  this.initConnection(pooling_size);
+}
+
+/// Constructor
+public MkCNNLayerAveragePooling(
+  Index neuron,
+  Index in_width,
+  Index in_height, 
+  Index in_channels, 
+  Index pooling_size) 
+{
+  this.init("", neuron, in_width, in_height, in_channels, pooling_size, -1.0, -1.0);
+}
+
+/// Constructor
+public MkCNNLayerAveragePooling(
+  String name,
+  Index neuron,
+  Index in_width,
+  Index in_height, 
+  Index in_channels, 
+  Index pooling_size,
+  Float64 init_w,
+  Float64 init_b) 
+{
+  this.init(name, neuron, in_width, in_height, in_channels, pooling_size, init_w, init_b);
+}
+
+/// Display the class attributs
+public MkCNNLayerAveragePooling.display() {
+  this.parent.display();
+  report("\nMkCNNLayerAveragePooling Attributs");
+  report("ins "   + this.ins);
+  report("outs "  + this.outs);
+}
+/*                                          Average-pooling Layer                                 */
+/**************************************************************************************************/
+ 
+                                          /***********************/
+
+/**************************************************************************************************/
+/*                                           Convolutional Layer                                  */
+/// Class for convolutional layer 
+object MkCNNLayerConvolutional : MkCNNLayerPartial {
+  private MkCNNIndex3D ins;
+  private MkCNNIndex3D outs;
+  private MkCNNIndex3D weight;
+  private MkCNNConnectionTable connection;
+  private Index window_size;
+};
+
+/// Connect the kernels
+private MkCNNLayerConvolutional.connectKernel!(
+  Index i, 
+  Index j,
+  Index in_c, 
+  Index out_c) 
+{
+  for (Index jj=0; jj<this.window_size; jj++)
+  { 
+    for (Index ii=0; ii<this.window_size; ii++)
+      this.connectWeight(
+        this.ins.index(i + ii, j + jj, in_c), 
+        this.outs.index(i, j, out_c), 
+        this.weight.index(ii, jj, out_c * this.ins.depth + in_c));
+  }
+}
+
+/// Set the kernel connections
+private MkCNNLayerConvolutional.initConnection!(MkCNNConnectionTable connection) {
+
+  for (Index in_c=0; in_c<this.ins.depth; in_c++) 
+  {
+    for (Index out_c=0; out_c<this.outs.depth; out_c++) 
+    {
+      if (!connection.isConnected(out_c, in_c)) 
+        continue;
+
+      for (Index j=0; j<this.outs.height; j++)
+        for (Index i=0; i<this.outs.width; i++)
+          this.connectKernel(i, j, in_c, out_c);
+    }
+  }
+
+  for (Index out_c=0; out_c<this.outs.depth; out_c++)
+    for (Index j=0; j<this.outs.height; j++)
+      for (Index i=0; i<this.outs.width; i++)
+        this.connectBias(out_c, this.outs.index(i, j, out_c));
+}
+
+private MkCNNLayerConvolutional.init!(
+  String name,
+  Index neuron,
+  Index in_width, 
+  Index in_height, 
+  Index window_size,
+  Index in_channels, 
+  Index out_channels, 
+  Float64 init_w,
+  Float64 init_b,
+  MkCNNConnectionTable connection) 
+{
+  this.parent.init(
+    name, 
+    neuron, 
+    in_width*in_height*in_channels, 
+    (in_width - window_size + 1) * (in_height - window_size + 1) * out_channels, 
+    window_size * window_size * in_channels * out_channels, 
+    out_channels,
+    1.0,
+    init_w,
+    init_b);
+
+  this.mode = MK_LAYER_CONVOLUTIONAL;
+  this.ins = MkCNNIndex3D(in_width, in_height, in_channels);
+  this.outs = MkCNNIndex3D((in_width - window_size + 1), (in_height - window_size + 1), out_channels);
+  this.weight = MkCNNIndex3D(window_size, window_size, in_channels*out_channels);
+  this.window_size = window_size;
+  this.initConnection(connection);
+  this.remap();
+}
+
+/// Constructor
+public MkCNNLayerConvolutional(
+  Index neuron,
+  Index in_width, 
+  Index in_height, 
+  Index window_size,
+  Index in_channels, 
+  Index out_channels)
+{
+  this.init("", neuron, in_width, in_height, window_size, 
+    in_channels, out_channels, -1.0, -1.0, MkCNNConnectionTable());
+}
+
+/// Constructor
+public MkCNNLayerConvolutional(
+  Index neuron,
+  Index in_width, 
+  Index in_height, 
+  Index window_size,
+  Index in_channels, 
+  Index out_channels, 
+  MkCNNConnectionTable connection)
+{
+  this.init("", neuron, in_width, in_height, window_size, 
+    in_channels, out_channels, -1.0, -1.0, connection);
+}
+
+/// Constructor
+public MkCNNLayerConvolutional(
+  String name,
+  Index neuron,
+  Index in_width, 
+  Index in_height, 
+  Index window_size,
+  Index in_channels, 
+  Index out_channels,
+  Float64 init_w,
+  Float64 init_b)
+{
+  this.init(name, neuron, in_width, in_height, window_size, 
+    in_channels, out_channels, init_w, init_b, MkCNNConnectionTable());
+}
+
+/// Constructor
+public MkCNNLayerConvolutional(
+  String name,
+  Index neuron,
+  Index in_width, 
+  Index in_height, 
+  Index window_size,
+  Index in_channels, 
+  Index out_channels, 
+  Float64 init_w,
+  Float64 init_b,
+  MkCNNConnectionTable connection)
+{
+  this.init(name, neuron, in_width, in_height, window_size, 
+    in_channels, out_channels, init_w, init_b, connection);
+}
+
+/// Display the class attributs
+public MkCNNLayerConvolutional.display() {
+  this.parent.display();
+  report("\nMkCNNLayerConvolutional Attributs");
+  report("ins "         + this.ins);
+  report("outs "        + this.outs);
+  report("weight "      + this.weight);
+  report("window_size " + this.window_size);
+}
+
+/// TO-DO
+public MkCNNLayerConvolutional.weightToImage() {
+
+  //MkImage image();
+
+  /*
+  Index border_width = 1;
+  Index pitch = this.window_size + border_width;
+  Index width = this.outs.depth * pitch + border_width;
+  Index height = this.ins.depth * pitch + border_width;
+  Index bg_color = 255;
+
+  image.resize(width, height);
+  image.fill(bg_color);
+
+  auto minmax = std::minmax_element(this->W_.begin(), this->W_.end());
+
+  for (Index r=0; r<this.ins.depth; r++) 
+  {
+    for (Index c=0; c<this.outs.depth; c++) 
+    {
+      if (!this.connection.isConnected(c, r)) 
+        continue;
+
+      Index top = r * pitch + border_width;
+      Index left = c * pitch + border_width;
+
+      for (Index y=0; y<this.window_size; y++) 
+      {
+        for (Index x=0; x<this.window_size; x++) 
+        {
+          Float64 w = this.W[weight.index(x, y, c * this.ins.depth + r)];
+          img.at(left + x, top + y)
+              = (image::intensity_t)rescale<float_t, int>(w, *minmax.first, *minmax.second, 0, 255);
+        }
+      }
+    }
+  }
+  */
+ // return image;
+}
+/*                                           Convolutional Layer                                  */
+/**************************************************************************************************/
