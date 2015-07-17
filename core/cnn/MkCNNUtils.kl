@@ -1,18 +1,16 @@
-/**************************************************************************************************/
-/*                                                                                                */
-/*  Informations :                                                                                */
-/*      This code is part of the project MLKL                                                     */
-/*                                                                                                */
-/*  Contacts :                                                                                    */
-/*      couet.julien@gmail.com                                                                    */
-/*                                                                                                */
-/**************************************************************************************************/
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
 
 require MLKL; 
 
 
-/**************************************************************************************************/
-/*                                                  Config                                        */
+//************************************************************************************************//
+//                                                  Config                                        //
 struct MkCNNDefs {
   Index task_size;
   Boolean gpu;
@@ -20,7 +18,7 @@ struct MkCNNDefs {
 
 function MkCNNDefs() { 
   this.task_size = 1;
-  this.gpu = true;
+  this.gpu = false;
 }
 
 function Index MkCNNDefs.taskSize() {
@@ -44,13 +42,21 @@ function Index MaxIndex(Float64 array[]) {
   }
   return max_index;
 }
-/*                                                  Config                                        */
-/**************************************************************************************************/
 
-                                          /***********************/
+/// Return astring with a constante lenght
+const Index max_str_length = 18;
 
-/**************************************************************************************************/
-/*                                               Image indexes                                    */
+inline String ToConstLenght(String string) {
+  String space;
+  return String(string + space.whiteSpace(max_str_length - string.length()));
+}
+//                                                  Config                                        //
+//************************************************************************************************//
+
+                                          //*********************//
+
+//************************************************************************************************//
+//                                               Image indexes                                    //
 struct MkCNNIndex3D {
   Index width;
   Index height;
@@ -70,14 +76,14 @@ function Index MkCNNIndex3D.index(Index x, Index y, Index channel) {
 function Index MkCNNIndex3D.size() {
   return this.width * this.height * this.depth;
 }
-/*                                               Image indexes                                    */
-/**************************************************************************************************/
+//                                               Image indexes                                    //
+//************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                            Layers connection                                   */
-// LAyers connection definition
+//************************************************************************************************//
+//                                            Layers connection                                   //
+/// Layers connection definition
 struct MkCNNIndexPair {
   Index first;
   Index second;
@@ -109,7 +115,7 @@ function Index MkCNNConnection.empty() {
 }
 
 
-// Connection table
+/// Connection table
 struct MkCNNConnectionTable {
   Index rows;
   Index cols;
@@ -151,14 +157,14 @@ function Boolean MkCNNConnectionTable.isConnected(Index i, Index j) {
 function Boolean MkCNNConnectionTable.isEmpty() {
   return this.rows == 0 && this.cols == 0;
 }
-/*                                            Layers connection                                   */
-/**************************************************************************************************/
+//                                            Layers connection                                   //
+//************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                                 Outputs                                        */
-// Hash table
+//************************************************************************************************//
+//                                                 Outputs                                        //
+/// Hash table
 struct MkCNNHashTable {
   Float64 values[];
 };
@@ -187,7 +193,7 @@ function MkCNNHashTable.clear!() {
 }
 
 
-// Structure contraining the result of the learning
+/// Structure contraining the result of the learning
 struct MkCNNNetworkResult {
   Index num_success;
   Index num_total;
@@ -246,7 +252,7 @@ function MkCNNNetworkResult.printDetail() {
 }
 
 
-// Display iteration info 
+/// Display iteration info 
 struct MkCNNEnumBatch {
   Index counter;        // To update the display
   Index training_size;  // Number of training images    
@@ -256,7 +262,7 @@ struct MkCNNEnumBatch {
 
 /// Constructor
 function MkCNNEnumBatch(Index training_size, Index batch_size) {
-  report("\n\n\n\n-------------------- Training --------------------");
+  report("\n\n\n-------------------- Training --------------------");
   this.training_size = training_size;
   this.batch_size = batch_size;
   this.current_size = 0;
@@ -264,7 +270,7 @@ function MkCNNEnumBatch(Index training_size, Index batch_size) {
 
 /// Reset the info
 function MkCNNEnumBatch.reset!(Index ite, Index nb_epoch) {
-  report("\n------------ Epoch " + Index(ite+1) + "/" + nb_epoch + " ------------\n");
+  report("Epoch " + Index(ite+1) + "/" + nb_epoch);
   this.counter = 0;
   this.current_size = 0;
   this.display();
@@ -273,7 +279,7 @@ function MkCNNEnumBatch.reset!(Index ite, Index nb_epoch) {
 /// Display the current percentage of computation
 function MkCNNEnumBatch.display() {
   Float32 percent = 100.0 * this.batch_size * Float32(this.current_size) / Float32(this.training_size); 
-  ReportR("Train         : " + Index(percent) + "%");
+  ReportR("Train            : " + Index(percent) + "%");
 }
 
 /// Update the iteration info and display it
@@ -310,15 +316,15 @@ function MkCNNEnumEpoch(Float64 learning_rate_decay) {
 
 /// Display the epoch info and perfor a test
 function MkCNNEnumEpoch.display(io Ref<MkCNNNetwork> nn, Float64 test_images[][], Index test_labels[]) {
-  report("Train         : 100%");
+  report("Train            : 100%");
   Float32 tim = Float32(getSecondsBetweenTicks(this.start, getCurrentTicks())/60.0);
-  report("Time          : " + tim + " mins");
+  report("Time             : " + tim + " mins");
   
   MkCNNNetworkResult res = nn.test(test_images, test_labels);
   Ref<MkCNNOptimizer> opti = nn.optimizer();
-  report("Learning rate : " + Float32(opti.learningRate()));
+  report("Learning rate    : " + Float32(opti.learningRate()));
   Float32 succes = 100.0*Float32(res.num_success)/Float32(res.num_total);
-  report("Test          : " + succes + "% succes");
+  report("Test             : " + succes + "% succes\n");
 }
 
 /// Update the epoch info + optimizer
@@ -332,5 +338,5 @@ function MkCNNEnumEpoch.update!(io Ref<MkCNNNetwork> nn, Float64 test_images[][]
   opti.learningRate(Math_max(0.00001, opti.learningRate()));
   this.start = getCurrentTicks();
 }
-/*                                                 Outputs                                        */
-/**************************************************************************************************/
+//                                                 Outputs                                        //
+//************************************************************************************************//

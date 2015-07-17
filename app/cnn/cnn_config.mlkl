@@ -34,15 +34,15 @@
 # 1. Network parameters
 tool=train
 gpu=0
-nbEpoch=2
+nbEpoch=5
 batchSize=10
 optimizer=1
 lossFunction=0
 
 
 # 2. Layer definitions 
-layersDefsPath=C:/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/cnn_layers_def.mlkl
-layersParamsPath=C:/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/cnn_layers_params.mlkl
+layersDefsPath=C:/Users/Julien/Documents/Dev/MLKL/app/sample/cnn/cnn_layers_def.mlkl
+layersParamsPath=C:/Users/Julien/Documents/Dev/MLKL/app/sample/cnn/cnn_layers_params.mlkl
 
 
 # 3. Images and labels
@@ -58,8 +58,8 @@ testImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/cifar-10/test_batch.
 
 
 # 4. Network saving and loading
-save=0
-auto_saving=1
+save=1
+autoSaving=1
 saveDirPath=C:/Users/Julien/Documents/Dev/MLKL/resources/
 saveFileName=cnn_network.mlkl
 #loadFilePath=C:/Users/Julien/Documents/Dev/MLKL/resources/2015-07-04_18-25-59/res.mlkl

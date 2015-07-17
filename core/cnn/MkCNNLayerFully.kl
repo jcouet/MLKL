@@ -1,12 +1,10 @@
-/**************************************************************************************************/
-/*                                                                                                */
-/*  Informations :                                                                                */
-/*      This code is part of the project MLKL                                                     */
-/*                                                                                                */
-/*  Contacts :                                                                                    */
-/*      couet.julien@gmail.com                                                                    */
-/*                                                                                                */
-/**************************************************************************************************/
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
 
 require MLKL; 
 
@@ -24,8 +22,8 @@ require MLKL;
   \endexample
 */
 
-/**************************************************************************************************/
-/*                                          Fully-connected Layer                                 */
+//************************************************************************************************//
+//                                          Fully-connected Layer                                 //
 /// Class for fully-connected layer 
 object MkCNNLayerFully : MkCNNLayerBase {
   protected MkCNNFilter filter;
@@ -55,8 +53,7 @@ public MkCNNLayerFully(
 /// Display the class attributs
 public MkCNNLayerFully.display() {
   this.parent.display();
-  report("\nMkCNNLayerFully Attributs");
-  report("Filter " + this.filter);
+  report("filter           : " + this.filter);
 }
 
 /// Return the total number of parameters connections
@@ -211,27 +208,22 @@ public Float64[] MkCNNLayerFully.bprop2nd!(Float64 current_delta2[]) {
 
   return this.prev().bprop2nd(this.prev_delta2);
 }
-/*                                          Fully-connected Layer                                 */
-/**************************************************************************************************/
+//                                          Fully-connected Layer                                //
+//************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                             Drop-out Layer                                     */
+//************************************************************************************************//
+//                                             Drop-out Layer                                     //
 /// Class for average-pooling layer 
 object MkCNNLayerDropout : MkCNNLayerFully {};
 
 /// Constructor
-public MkCNNLayerDropout(
-  Index neuron,
-  Index in_size, 
-  Index out_size, 
-  Index weight_size, 
-  Index bias_size) 
-{
-  this.init("", neuron, in_size, out_size, weight_size, bias_size, -1.0, -1.0);
+public MkCNNLayerDropout(Index neuron, Index in_size, Index out_size, Index mode) {
+  this.init("", neuron, in_size, out_size, -1.0, -1.0);
   this.mode = MK_LAYER_DROPOUT;
   this.filter = MkCNNDropout();
+  this.filter.mode(mode);
 }
 
 /// Constructor
@@ -263,5 +255,5 @@ public MkCNNLayerDropout.context!(Index ctx) {
 private MkCNNLayerDropout.postUpdate!() {
   this.filter.endBatch();
 }
-/*                                             Drop-out Layer                                     */
-/**************************************************************************************************/
+//                                             Drop-out Layer                                     //
+//************************************************************************************************//

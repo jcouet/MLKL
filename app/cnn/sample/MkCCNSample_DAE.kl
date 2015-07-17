@@ -1,0 +1,59 @@
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
+
+require MLKL; 
+
+function MkCNNConfig ConfigMLP() {
+  MkCNNConfig config;
+
+  config.save=0;
+  config.gpu=0;
+  config.epoch = 20;
+  config.batch_size = 10;
+  config.optimizer = MK_OPTIMIZER_GD;
+  config.loss_function = MK_LOSS_MSE;
+
+  config.train_images_path = "C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-images.idx3-ubyte";
+  config.test_images_path = "C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-images.idx3-ubyte";
+  config.train_labels_path = "C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-labels.idx1-ubyte";
+  config.test_labels_path = "C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-labels.idx1-ubyte";
+
+  return config;
+}
+ 
+function MkCNNLayer[] ConstructMLP(
+  Index nb_input_units,
+  Index nb_hidden_units,
+  Index nb_output_units) 
+{
+  MkCNNLayer layers[];
+  //layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  32,  5,  5,  16, 120));
+  layers.push(MkCNNLayerFully(MK_NEURON_TANH, nb_input_units, nb_hidden_units));
+  layers.push(MkCNNLayerFully(MK_NEURON_TANH, nb_hidden_units, nb_output_units));
+  return layers;
+}
+
+operator entry() {
+
+  Index nb_hidden_neuron = 200;
+  MkCNNConfig config = ConfigMLP();
+  MkCNNLayer layers[] = ConstructMLP(32*32, nb_hidden_neuron, 10);
+  MkCNNNetwork nn(config.loss_function, config.optimizer, layers);
+
+  nn.display();
+  // load MNIST dataset
+  MkCNNData data;
+  data.loadTrainingMNIST(config);
+ 
+  nn.optimizer().learningRate(0.001);
+
+  // Declare the enumeration, here we can set the larning rate decay
+  MkCNNEnumEpoch epoch_enum(); 
+
+  nn.train(data, config, epoch_enum);
+}

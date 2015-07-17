@@ -1,16 +1,34 @@
-/**************************************************************************************************/
-/*                                                                                                */
-/*  Informations :                                                                                */
-/*      This code is part of the project MLKL                                                     */
-/*                                                                                                */
-/*  Contacts :                                                                                    */
-/*      couet.julien@gmail.com                                                                    */
-/*                                                                                                */
-/**************************************************************************************************/
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
 
 require MLKL; 
 
+
+function MkCNNConfig ConfigLeNet() {
+  MkCNNConfig config;
+
+  config.save=0;
+  config.gpu=0;
+  config.epoch = 20;
+  config.batch_size = 10;
+  config.optimizer = MK_OPTIMIZER_GD;
+  config.loss_function = MK_LOSS_MSE;
+
+  config.train_images_path = "C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-images.idx3-ubyte";
+  config.test_images_path = "C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-images.idx3-ubyte";
+  config.train_labels_path = "C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-labels.idx1-ubyte";
+  config.test_labels_path = "C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-labels.idx1-ubyte";
+
+  return config;
+}
+
 function Boolean[] CreateConnections() {
+  
   Boolean O = true;
   Boolean X = false;
 
@@ -30,8 +48,8 @@ function Boolean[] CreateConnections() {
   return c;
 }
 
-function MkCNNLayerInterface[] CreateLayers() {
-  MkCNNLayerInterface layers[];
+function MkCNNLayer[] ConstructLeNet() {
+  MkCNNLayer layers[];
   layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  32, 32, 5,  1, 6));
   layers.push(MkCNNLayerAveragePooling(MK_NEURON_TANH, 28, 28, 6,  2));
   layers.push(MkCNNLayerConvolutional(MK_NEURON_TANH,  14, 14, 5,  6,  16, MkCNNConnectionTable(CreateConnections(), 6, 16)));
@@ -41,50 +59,31 @@ function MkCNNLayerInterface[] CreateLayers() {
   return layers;
 }
 
-function LoadMNIST(
-  MkCNNConfig config,
-  io Float64 train_images[][],
-  io Float64 test_images[][],
-  io Index train_labels[],
-  io Index test_labels[]) 
-{
-  MkMNIST mnist();
-  train_images = mnist.parseImages(config.train_images_path, -1.0, 1.0, 2, 2);
-  test_images = mnist.parseImages(config.test_images_path, -1.0, 1.0, 2, 2);
-  train_labels = mnist.parseLabels(config.train_labels_path);
-  test_labels = mnist.parseLabels(config.test_labels_path); 
-}
-
 operator entry() {
 
-  // Load the data
-  Index train_labels[], test_labels[];
-  Float64 train_images[][], test_images[][];
-  LoadMNIST(config, train_images, test_images, train_labels, test_labels);
-
   // Configure the network layers
-  MkCNNConfig config;
-  MkCNNLayerInterface layers = CreateLayers();
+  MkCNNConfig config = ConfigLeNet();
+  MkCNNLayer layers = ConstructLeNet();
  
   // Create the network
   MkCNNNetwork nn(config.lossFunction(), config.optimizer(), layers);
- 
+  nn.display();
+
   // Set the initiale learning rate
   Ref<MkCNNOptimizerInterface> opti = nn.optimizer();
   nn.optimizer().learningRate(nn.optimizer().learningRate()* sqrt(config.batch_size));
 
-  // Declare the enumeration
+  // load MNIST dataset
+  MkCNNData data;
+  data.loadTrainingMNIST(config);
+
+  // Train the network
   // Here we could sate the larning rate decay
   MkEnumerateEpoch on_epoch_enumerate(); 
-  MkEnumerateData on_batch_enumerate(train_images.size(), config.batch_size); 
-  
-  // Train the network
-  nn.train( config, train_images, train_labels, test_images, test_labels,
-            on_epoch_enumerate, on_batch_enumerate);
+  nn.train(data, config, epoch_enum);
 
 
   // Finally test it  
-  String path_image = 'C:/Users/Julien/Documents/Dev/MLKL/data/mnist/4.bmp';
-  Float64 image_data[] = LoadImage(path_image, -1.0, 1.0);
+  //String path_image = 'C:/Users/Julien/Documents/Dev/MLKL/data/mnist/4.bmp';
+  //Float64 image_data[] = LoadImage(path_image, -1.0, 1.0);
 }
-

@@ -1,12 +1,10 @@
-/**************************************************************************************************/
-/*                                                                                                */
-/*  Informations :                                                                                */
-/*      This code is part of the project MLKL                                                     */
-/*                                                                                                */
-/*  Contacts :                                                                                    */
-/*      couet.julien@gmail.com                                                                    */
-/*                                                                                                */
-/**************************************************************************************************/
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
 
 require MLKL; 
 
@@ -98,11 +96,13 @@ public MkCNNNetwork(Index loss_function, Index optimizer, io MkCNNLayer layers[]
 
 /// Display the netwok attributs
 public MkCNNNetwork.display() {
-  report("\nMkCNNNetwork Attributs ");
-  report("defs "          + this.defs);
-  report("name "          + this.name);
-  report("optimizer "     + this.optimizer);
-  report("loss_function " + this.loss_function);
+  report("\n\n\n-------------------- Network --------------------");
+  report("Attributs");
+  report("name             : " + this.name);
+  report("gpu              : " + this.defs.gpu());
+  report("taskSize         : " + this.defs.taskSize());
+  report("loss_function    : " + this.loss_function.modeAsStr());
+  this.optimizer().display();  
   this.layers.display();
 }
 
@@ -298,7 +298,6 @@ private MkCNNNetwork.calcHessian!(Float64 ins[][], Index size_init_hessian) {
 }
 
 private Float64 MkCNNNetwork.getLoss(Float64 outs[], Float64 t[]) {
-  //assert(outs.size() == (Index)t.size());
   Float64 e = 0.0;
   for (Index i = 0; i < outs.size(); i++)
     e += Float64(this.loss_function.f(outs[i], t[i]));

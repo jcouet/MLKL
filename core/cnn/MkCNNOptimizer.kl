@@ -1,18 +1,16 @@
-/**************************************************************************************************/
-/*                                                                                                */
-/*  Informations :                                                                                */
-/*      This code is part of the project MLKL                                                     */
-/*                                                                                                */
-/*  Contacts :                                                                                    */
-/*      couet.julien@gmail.com                                                                    */
-/*                                                                                                */
-/**************************************************************************************************/
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
 
 require MLKL; 
  
 
-/**************************************************************************************************/
-/*                                             2. ASM Batches                                     */
+//************************************************************************************************//
+//                                             2. ASM Batches                                     //
 const Index MK_OPTIMIZER_GD = 0;
 const Index MK_OPTIMIZER_GDLM = 1;
  
@@ -35,6 +33,7 @@ interface MkCNNOptimizer {
   reset!();
 };
 
+///
 object MkCNNOptimizerBase : MkCNNOptimizer {  
   protected Index mode;
   protected Float64 learning_rate;  // Learning rate
@@ -51,50 +50,59 @@ public String MkCNNOptimizerBase.modeAsStr() {
   return MkCNNOptimizerModeAsStr(this.mode);
 }
 
+/// Display the optimizer attributs
 public MkCNNOptimizerBase.display() {
-  report("learning_rate " + this.learning_rate);
-  report("weigthDecay " + this.weigth_decay);
+  report("optimizer        : " + this.modeAsStr());
+  report("learning_rate    : " + this.learning_rate);
+  report("weigthDecay      : " + this.weigth_decay);
 }
 
-public MkCNNOptimizerBase.update!(
-  Float64 dw[], 
-  Float64 H[], 
-  io Float64 w[]) {}
+/// Update the optimizer
+/// To-be overload
+public MkCNNOptimizerBase.update!(Float64 dw[], Float64 H[], io Float64 w[]) {}
 
+/// Return TRUE if the optimizer needs an Hessian matrix
+/// To-be overload
 public Boolean MkCNNOptimizerBase.requiresHessian() {
   return false;
 }
 
+/// Init the optimizer value
 protected MkCNNOptimizerBase.init!(Float64 learning_rate, Float64 weigth_decay) {
   this.learning_rate = learning_rate;
   this.weigth_decay = weigth_decay;
 }
 
+/// Set the learning rate
 public MkCNNOptimizerBase.learningRate!(Float64 learning_rate) {
   this.learning_rate = learning_rate;
 }
 
-public MkCNNOptimizerBase.weigthDecay!(Float64 weigth_decay) {
-  this.weigth_decay = weigth_decay;
-}
-
+/// Get the learning rate
 public Float64 MkCNNOptimizerBase.learningRate() {
   return this.learning_rate;
 }
 
+/// Set the weigth decay
+public MkCNNOptimizerBase.weigthDecay!(Float64 weigth_decay) {
+  this.weigth_decay = weigth_decay;
+}
+
+/// Get the weigth decay
 public Float64 MkCNNOptimizerBase.weigthDecay() {
   return this.weigth_decay;
 }
 
-public MkCNNOptimizerBase.reset!() {
-}
-/*                                       end Constructor/Destructor                               */
-/**************************************************************************************************/
+/// Reset
+/// To-be overload
+public MkCNNOptimizerBase.reset!() {}
+//                                       end Constructor/Destructor                               //
+//************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                             2. ASM Batches                                     */
+//************************************************************************************************//
+//                                             2. ASM Batches                                     //
 object MkCNNOptimizerGD : MkCNNOptimizerBase {};
 
 public MkCNNOptimizerGD() {
@@ -106,32 +114,24 @@ public MkCNNOptimizerGD(Float64 learning_rate, Float64 weigth_decay) {
   this.init(learning_rate, weigth_decay);
 }
 
-operator MkCNNOptimizerGDUpdate_task<<<i>>>(
-  MkCNNOptimizerGD gdlm,
-  Float64 dw[], 
-  io Float64 w[]) 
-{
-  w[i] -= (gdlm.learningRate() / (w[i] + gdlm.weigthDecay())) * (dw[i]); 
+operator MkCNNOptimizerGDUpdate_task<<<i>>>(Ref<MkCNNOptimizerGD> gd, Float64 dw[], io Float64 w[]) {
+  w[i] -= (gd.learningRate() / (w[i] + gd.weigthDecay())) * (dw[i]); 
 }
 
-public MkCNNOptimizerGD.update!(
-  Float64 dw[], 
-  Float64 H[], 
-  io Float64 w[]) 
-{
+public MkCNNOptimizerGD.update!(Float64 dw[], Float64 H[], io Float64 w[]) {
   MkCNNOptimizerGDUpdate_task<<<w.size()>>>(this, dw, w);
 }
 
 public Boolean MkCNNOptimizerGD.requiresHessian() {
   return false;
 }
-/*                                       end Constructor/Destructor                               */
-/**************************************************************************************************/
+//                                       end Constructor/Destructor                               //
+//************************************************************************************************//
 
                                           /***********************/
 
-/**************************************************************************************************/
-/*                                             2. ASM Batches                                     */
+//************************************************************************************************//
+//                                             2. ASM Batches                                     //
 object MkCNNOptimizerGDLM : MkCNNOptimizerBase {};
 
 public MkCNNOptimizerGDLM() {
@@ -152,11 +152,7 @@ operator MkCNNOptimizerGDLMUpdate_task<<<i>>>(
   w[i] = w[i] - (gdlm.learningRate() / (H[i] + gdlm.weigthDecay())) * (dw[i]); 
 }
 
-public MkCNNOptimizerGDLM.update!(
-  Float64 dw[], 
-  Float64 H[], 
-  io Float64 w[]) 
-{
+public MkCNNOptimizerGDLM.update!(Float64 dw[], Float64 H[], io Float64 w[]) {
   MkCNNOptimizerGDLMUpdate_task<<<w.size()>>>(this, dw, H, w);
 }
 
@@ -168,13 +164,13 @@ public MkCNNOptimizerGDLM.display() {
 public Boolean MkCNNOptimizerGDLM.requiresHessian() {
   return true;
 }
-/*                                       end Constructor/Destructor                               */
-/**************************************************************************************************/
+//                                       end Constructor/Destructor                               //
+//************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                             2. ASM Batches                                     */
+//************************************************************************************************//
+//                                             2. ASM Batches                                     //
 // http://xcorr.net/2014/01/23/adagrad-eliminating-learning-rates-in-stochastic-gradient-descent/
 /*
 object MkCNNOptimizerADAGRAD : MkCNNOptimizer {  
@@ -225,6 +221,6 @@ public Boolean MkCNNOptimizerADAGRAD.requiresHessian() {
   return false;
 }
 */
-/*                                       end Constructor/Destructor                               */
-/**************************************************************************************************/
+//                                       end Constructor/Destructor                               //
+//************************************************************************************************//
  

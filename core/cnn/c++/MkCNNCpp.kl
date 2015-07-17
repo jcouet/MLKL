@@ -8,27 +8,16 @@
 /*                                                                                                */
 /**************************************************************************************************/
 
+
 object MkCNNCpp {
   Data handle;
 };    
 
 function Index[] MkCNNCpp.readLabels_MNIST(String path) = "ReadLabels_MNIST";
 
-function Float64[][] MkCNNCpp.readImages_MNIST(
-  String path,
-  Float64 scale_min,
-  Float64 scale_max,
-  Float64 x_padding,
-  Float64 y_padding) 
-= "ReadImages_MNIST";
+function Float64[][] MkCNNCpp.readImages_MNIST(String path, Float64 scale_min, Float64 scale_max, Float64 x_padding, Float64 y_padding) = "ReadImages_MNIST";
  
-function MkCNNCpp.readBatch_CIFAR(
-  String path, 
-  Boolean rgb,
-  io Float64 images[][], 
-  io UInt32 labels[]) 
-= "ReadBatch_CIFAR";
-
+function MkCNNCpp.readBatch_CIFAR(String path, Boolean rgb, io Float64 images[][], io UInt32 labels[]) = "ReadBatch_CIFAR";
 
 /******/
 

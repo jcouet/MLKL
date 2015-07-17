@@ -1,12 +1,10 @@
-/**************************************************************************************************/
-/*                                                                                                */
-/*  Informations :                                                                                */
-/*      This code is part of the project MLKL                                                     */
-/*                                                                                                */
-/*  Contacts :                                                                                    */
-/*      couet.julien@gmail.com                                                                    */
-/*                                                                                                */
-/**************************************************************************************************/
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
 
 require MLKL; 
  
@@ -24,8 +22,8 @@ require MLKL;
   \endexample
 */
 
-/**************************************************************************************************/
-/*                                                  Layer                                         */
+//************************************************************************************************//
+//                                                  Layer                                         //
 const Index MK_LAYER_BASE = 0;
 const Index MK_LAYER_INPUT = 1;
 const Index MK_LAYER_PARTIAL = 2;
@@ -173,16 +171,17 @@ public MkCNNLayerBase(
 
 /// Display the class attributs
 public MkCNNLayerBase.display() {
-  report("\nMkCNNLayerBase Attributs");
-  report("defs "            + this.defs);
-  report("inSize "          + this.in_size);
-  report("outSize "         + this.out_size);
-  report("weightSize "      + this.w.size());
-  report("biasSize "        + this.b.size()); 
-  report("paramSize "       + this.paramSize());
-  report("fanInSize "       + this.fanInSize()); 
-  report("connectionSize "  + this.connectionSize()); 
-}
+  report("\nLayer "           + this.modeAsStr());
+  report("name             : " + this.name);
+  report("nuron            : " + this.neuron.modeAsStr());
+  report("inSize           : " + this.in_size);
+  report("outSize          : " + this.out_size);
+  report("weightSize       : " + this.w.size());
+  report("biasSize         : " + this.b.size()); 
+  report("paramSize        : " + this.paramSize());
+  report("fanInSize        : " + this.fanInSize()); 
+  report("connectionSize   : " + this.connectionSize()); 
+} 
 
 /// Return the layer name
 public String MkCNNLayerBase.name() {
@@ -404,13 +403,13 @@ public Float64[] MkCNNLayerBase.bprop!(Float64 current_delta[], Index index) {
 public Float64[] MkCNNLayerBase.bprop2nd!(Float64 current_delta2[]) {
   return current_delta2;
 }
-/*                                                  Layer                                         */
-/**************************************************************************************************/
+//                                                  Layer                                         //
+//************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                                Input Layer                                     */
+//************************************************************************************************//
+//                                                Input Layer                                     //
 /// Class for data layer 
 object MkCNNLayerData : MkCNNLayerBase {};
 
@@ -428,12 +427,12 @@ public MkCNNLayerData(String name, Float64 init_w, Float64 init_b) {
 
 /// Return the number of layer inputs
 public Index MkCNNLayerData.inSize() {
-  return (this.next() != null) ? this.next().inSize(): 0;
+  return (this.next()) ? this.next().inSize(): 0;
 }
 
 /// Return the number of layer connections
 public Index MkCNNLayerData.connectionSize() { 
-  return this.inSize;
+  return this.in_size;
 }
 
 public Index MkCNNLayerData.fanInSize() {
@@ -443,7 +442,7 @@ public Index MkCNNLayerData.fanInSize() {
 /// Forward propagation
 public Float64[] MkCNNLayerData.fprop!(Float64 ins[], Index index) {
   this.output[index] = ins;
-  return (this.next()!= null) ? this.next().fprop(ins, index) : this.output[index];
+  return (this.next()) ? this.next().fprop(ins, index) : this.output[index];
 }
 
 /// Backward propagetion 
@@ -455,13 +454,13 @@ public Float64[] MkCNNLayerData.bprop!(Float64 current_delta[], Index index) {
 public Float64[] MkCNNLayerData.bprop2nd!(Float64 current_delta2[]) {
   return current_delta2;
 }
-/*                                                Input Layer                                     */
-/**************************************************************************************************/
+//                                                Input Layer                                     //
+//************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                            Max-pooling Layer                                   */
+//************************************************************************************************//
+//                                            Max-pooling Layer                                   //
 /// Class for max-pooling layer 
 object MkCNNLayerMaxPooling : MkCNNLayerBase {
   private Index out2in[][];
@@ -577,7 +576,6 @@ operator MkCNNLayerMaxPoolingFprop_task<<<i>>>(
   io Index out2in_max[],
   io Float64 output[]) 
 {
-
   Index in_index[] = out2in[i];
   Float64 max_value = -1.79769e+308;
   
@@ -676,23 +674,23 @@ public Float64[] MkCNNLayerMaxPooling.bprop2nd!(Float64 current_delta2[]) {
 
   return this.prev().bprop2nd(this.prev_delta2);
 }
-/*                                            Max-pooling Layer                                   */
-/**************************************************************************************************/
+//                                            Max-pooling Layer                                   //
+//************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                          Layers (Stack of Layer)                               */
+//************************************************************************************************//
+//                                          Layers (Stack of Layer)                               //
 /// Class representong a stack of connected layers
 object MkCNNLayers {
   private MkCNNLayer layers[];
   private MkCNNLayer first; // Is constrcted as an InputLayer
 };
 
-private MkCNNLayers.construct!(io MkCNNLayers rhs) {
+private MkCNNLayers.construct!(io MkCNNLayers layers) {
   this.add(this.first);
-  for (Index i = 1; i < rhs.layers.size(); i++)
-    this.add(rhs.layers[i]);
+  for (Index i = 1; i < layers.layers.size(); i++)
+    this.add(layers.layers[i]);
 }
 
 /// Constructor
@@ -709,7 +707,7 @@ public MkCNNLayers.display() {
 
 /// Add a new layer to the stack
 public MkCNNLayers.add!(io MkCNNLayer new_tail) {
-  if(this.tail() != null)
+  if(this.tail())
     this.tail().connect(new_tail);
   this.layers.push(new_tail);
 }
@@ -759,6 +757,6 @@ public MkCNNLayers.divideHessian!(Index denominator) {
   for(Index l=0; l<this.layers.size(); ++l)
     this.layers[l].divideHessian(denominator);
 }
-/*                                          Layers (Stack of Layer)                               */
-/**************************************************************************************************/
+//                                          Layers (Stack of Layer)                               //
+//************************************************************************************************//
  

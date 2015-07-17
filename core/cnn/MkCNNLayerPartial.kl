@@ -1,12 +1,10 @@
-/**************************************************************************************************/
-/*                                                                                                */
-/*  Informations :                                                                                */
-/*      This code is part of the project MLKL                                                     */
-/*                                                                                                */
-/*  Contacts :                                                                                    */
-/*      couet.julien@gmail.com                                                                    */
-/*                                                                                                */
-/**************************************************************************************************/
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
 
 require MLKL; 
 
@@ -25,8 +23,8 @@ require MLKL;
 */
  
 
-/**************************************************************************************************/
-/*                                         Partial-connected Layer                                */
+//************************************************************************************************//
+//                                         Partial-connected Layer                                //
 /// Class for partially-connected layer 
 object MkCNNLayerPartial : MkCNNLayerBase {
   protected MkCNNConnection weight2io[]; // weight_id . [(in_id, out_id)]
@@ -95,13 +93,12 @@ public MkCNNLayerPartial(
 /// Display the class attributs
 public MkCNNLayerPartial.display() {
   this.parent.display();
-  report("\nMkCNNLayerPartial Attributs");
-  report("scaleFactor "   + this.scale_factor);
-  report("weight2ioSize " + this.weight2io.size());
-  report("out2wiSize "    + this.out2wi.size());
-  report("in2woSize "     + this.in2wo.size());
-  report("bias2outSize "  + this.bias2out.size());
-  report("out2biasSize "  + this.out2bias.size());
+  report("scaleFactor     : " + this.scale_factor);
+  report("weight2ioSize   : " + this.weight2io.size());
+  report("out2wiSize      : " + this.out2wi.size());
+  report("in2woSize       : " + this.in2wo.size());
+  report("bias2outSize    : " + this.bias2out.size());
+  report("out2biasSize    : " + this.out2bias.size());
 }
 
 /// Return the total number of no-null connections
@@ -357,13 +354,13 @@ public Float64[] MkCNNLayerPartial.bprop2nd!(Float64 current_delta2[]) {
 
   return this.prev().bprop2nd(this.prev_delta2);
 }
-/*                                         Partial-connected Layer                                */
-/**************************************************************************************************/
+//                                         Partial-connected Layer                                //
+//************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                          Average-pooling Layer                                 */
+//************************************************************************************************//
+//                                          Average-pooling Layer                                 //
 /// Class for average-pooling layer 
 object MkCNNLayerAveragePooling : MkCNNLayerPartial {
   private MkCNNIndex3D ins;
@@ -460,17 +457,16 @@ public MkCNNLayerAveragePooling(
 /// Display the class attributs
 public MkCNNLayerAveragePooling.display() {
   this.parent.display();
-  report("\nMkCNNLayerAveragePooling Attributs");
-  report("ins "   + this.ins);
-  report("outs "  + this.outs);
+  report("ins             : " + this.ins);
+  report("outs            : " + this.outs);
 }
-/*                                          Average-pooling Layer                                 */
-/**************************************************************************************************/
+//                                          Average-pooling Layer                                 //
+//************************************************************************************************//
  
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                           Convolutional Layer                                  */
+//************************************************************************************************//
+//                                           Convolutional Layer                                  //
 /// Class for convolutional layer 
 object MkCNNLayerConvolutional : MkCNNLayerPartial {
   private MkCNNIndex3D ins;
@@ -614,11 +610,10 @@ public MkCNNLayerConvolutional(
 /// Display the class attributs
 public MkCNNLayerConvolutional.display() {
   this.parent.display();
-  report("\nMkCNNLayerConvolutional Attributs");
-  report("ins "         + this.ins);
-  report("outs "        + this.outs);
-  report("weight "      + this.weight);
-  report("window_size " + this.window_size);
+  report("ins              : " + this.ins);
+  report("outs             : " + this.outs);
+  report("weight           : " + this.weight);
+  report("window_size      : " + this.window_size);
 }
 
 /// TO-DO
@@ -662,5 +657,5 @@ public MkCNNLayerConvolutional.weightToImage() {
   */
  // return image;
 }
-/*                                           Convolutional Layer                                  */
-/**************************************************************************************************/
+//                                           Convolutional Layer                                  //
+//************************************************************************************************//

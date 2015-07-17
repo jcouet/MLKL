@@ -1,12 +1,10 @@
-/**************************************************************************************************/
-/*                                                                                                */
-/*  Informations :                                                                                */
-/*      This code is part of the project MLKL                                                     */
-/*                                                                                                */
-/*  Contacts :                                                                                    */
-/*      couet.julien@gmail.com                                                                    */
-/*                                                                                                */
-/**************************************************************************************************/
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
 
 require MLKL; 
 
@@ -25,8 +23,8 @@ require MLKL;
 */
 
 
-/**************************************************************************************************/
-/*                                               None filter                                      */
+//************************************************************************************************//
+//                                               None filter                                      //
 /// Interface for filters
 interface MkCNNFilter {
   Index mode();
@@ -81,13 +79,13 @@ public Float64[] MkCNNFilterNone.filterFProp!(Float64 outs[], Index index) {
 public Float64[] MkCNNFilterNone.filterBProp!(Float64 delta[], Index index) {
   return delta;
 }
-/*                                               None filter                                      */
-/**************************************************************************************************/
+//                                               None filter                                      //
+//************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                             Drop-out filter                                    */
+//************************************************************************************************//
+//                                             Drop-out filter                                    //
 const Index DROPOUT_CONTEXT_TRAIN_PHASE = 0;
 const Index DROPOUT_CONTEXT_TEST_PHASE  = 1;
 const Index DROPOUT_MODE_PER_DATA       = 0;
@@ -140,6 +138,12 @@ public Index MkCNNDropout.mode() {
   return this.mode;
 }
 
+/// Return the filter mode
+public MkCNNDropout.mode!(Index mode) {
+  this.mode = mode;
+}
+
+
 /// Set the context
 public Index MkCNNDropout.context() {
   return this.context;
@@ -186,7 +190,7 @@ public Float64[] MkCNNDropout.filterBProp!(Float64 delta[], Index index) {
 
   return this.masked_delta[index];
 }
-/*                                             Drop-out filter                                    */
-/**************************************************************************************************/
+//                                             Drop-out filter                                    //
+//************************************************************************************************//
 
  

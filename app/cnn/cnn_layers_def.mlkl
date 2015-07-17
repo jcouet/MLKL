@@ -27,7 +27,7 @@ outChannels=6
 
 [pool1]
 type=pool
-pool=avg
+pool=max
 neuron=relu
 filters=28
 inChannels=6

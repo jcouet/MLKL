@@ -1,19 +1,17 @@
-/**************************************************************************************************/
-/*                                                                                                */
-/*  Informations :                                                                                */
-/*      This code is part of the project MLKL                                                     */
-/*                                                                                                */
-/*  Contacts :                                                                                    */
-/*      couet.julien@gmail.com                                                                    */
-/*                                                                                                */
-/**************************************************************************************************/
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
 
 require MLKL; 
 
 
 operator entry() {
 
-  String path_config = "C:/Users/Julien/Documents/Dev/MLKL/app/samples/cnn/cnn_config.mlkl";
+  String path_config = "C:/Users/Julien/Documents/Dev/MLKL/app/sample/cnn/cnn_config.mlkl";
   String path_image = 'C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/4.bmp';
 
   // Load the configuration file and set the network layers
@@ -26,7 +24,6 @@ operator entry() {
   MkCNNNetwork nn(config.loss_function, config.optimizer, layers);
  
   // Set the initiale learning rate
-  Ref<MkCNNOptimizer> opti = nn.optimizer();
   nn.optimizer().learningRate(nn.optimizer().learningRate()* sqrt(config.batch_size));
 
   // Declare the enumeration, here we can set the larning rate decay

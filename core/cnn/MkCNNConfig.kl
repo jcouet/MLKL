@@ -1,12 +1,10 @@
-/**************************************************************************************************/
-/*                                                                                                */
-/*  Informations :                                                                                */
-/*      This code is part of the project MLKL                                                     */
-/*                                                                                                */
-/*  Contacts :                                                                                    */
-/*      couet.julien@gmail.com                                                                    */
-/*                                                                                                */
-/**************************************************************************************************/
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
 
 require Util, FileIO, MLKL; 
 
@@ -22,10 +20,8 @@ require Util, FileIO, MLKL;
   \endexample
 */
 
-/**************************************************************************************************/
-/*                                          Activation functions                                  */
-const Index max_str_length = 18;
-
+//************************************************************************************************//
+//                                          Activation functions                                  //
 // Struct to temporary hold the layers' parameters
 struct MkCNNLayerParams {
   String name;
@@ -108,12 +104,6 @@ inline Boolean CheckPath(String name, String path) {
     return false;
   }
   return true;
-}
-
-/// Return astring with a constante lenght
-inline String toConstLenght(String string) {
-  String space;
-  return String(string + space.whiteSpace(max_str_length - string.length()));
 }
 
 /// Parse the layers configuration and create them
@@ -213,11 +203,11 @@ inline Boolean ParseLayerConvolutional(String name, MkCNNLayerParams param, io T
   else if(!CheckInt("inChannels", in_channels)) return false;
   else if(!CheckInt("outChannels", out_channels)) return false;
   else {
-    report("neuron      : " + toConstLenght(MkCNNNeuronModeAsStr(neuron)) + "epsW : " + param.epsW);
-    report("filters     : " + toConstLenght(String(filters))      + "epsB : " + param.epsB);
-    report("filterSize  : " + toConstLenght(String(filter_size))  + "momW : " + param.momW);
-    report("inChannels  : " + toConstLenght(String(in_channels))  + "momB : " + param.momB);
-    report("outChannels : " + toConstLenght(String(out_channels)) + "wc   : " + param.wc);
+    report("neuron      : " + ToConstLenght(MkCNNNeuronModeAsStr(neuron)) + "epsW : " + param.epsW);
+    report("filters     : " + ToConstLenght(String(filters))      + "epsB : " + param.epsB);
+    report("filterSize  : " + ToConstLenght(String(filter_size))  + "momW : " + param.momW);
+    report("inChannels  : " + ToConstLenght(String(in_channels))  + "momB : " + param.momB);
+    report("outChannels : " + ToConstLenght(String(out_channels)) + "wc   : " + param.wc);
     report("initW       : " + init_w);
     report("initB       : " + init_b);
 
@@ -258,11 +248,11 @@ inline Boolean ParseLayerFully(String name, MkCNNLayerParams param, io TextReade
   else if(!CheckInt("inChannels", in_channels)) return false;
   else if(!CheckInt("outChannels", out_channels)) return false;
   else {
-    report("neuron      : " + toConstLenght(MkCNNNeuronModeAsStr(neuron)) + "epsW : " + param.epsW);
-    report("inChannels  : " + toConstLenght(String(in_channels))   + "epsB : " + param.epsB);
-    report("outChannels : " + toConstLenght(String(out_channels))  + "momW : " + param.momW);
-    report("initW       : " + toConstLenght(String(init_w))        + "momB : " + param.momB);
-    report("initB       : " + toConstLenght(String(init_b))        + "wc   : " + param.wc);
+    report("neuron      : " + ToConstLenght(MkCNNNeuronModeAsStr(neuron)) + "epsW : " + param.epsW);
+    report("inChannels  : " + ToConstLenght(String(in_channels))   + "epsB : " + param.epsB);
+    report("outChannels : " + ToConstLenght(String(out_channels))  + "momW : " + param.momW);
+    report("initW       : " + ToConstLenght(String(init_w))        + "momB : " + param.momB);
+    report("initB       : " + ToConstLenght(String(init_b))        + "wc   : " + param.wc);
 
     layers.push(MkCNNLayerFully(name, neuron, in_channels, out_channels, init_w, init_b));
     return true;
@@ -381,13 +371,13 @@ inline Boolean ParseLayersParams(String path, io MkCNNLayerParams params[], io M
 
   return reader.close();
 }
-/*                                              Loss functions                                    */
-/**************************************************************************************************/
+//                                              Loss functions                                    //
+//************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
-/**************************************************************************************************/
-/*                                          Activation functions                                  */
+//************************************************************************************************//
+//                                          Activation functions                                  //
 /// Class for network configuration 
 struct MkCNNConfig {
   SInt32 worker;
@@ -413,6 +403,7 @@ struct MkCNNConfig {
   String load_file_path;
 };
 
+/// Default Constructor
 function MkCNNConfig() {
   this.worker = 1;
   this.gpu = -1;
@@ -457,7 +448,7 @@ inline Boolean MkCNNConfig.parse!(String path) {
        
       else if(line.find("testLabelsPath=") > -1) this.test_labels_path = ParseStr("testLabelsPath=", line); 
 
-      else if(line.find("autoSaving=") > -1) this.auto_saving = ParseInt("optimizer=", line);  
+      else if(line.find("autoSaving=") > -1) this.auto_saving = ParseInt("autoSaving=", line);  
 
       else if(line.find("save=") > -1) this.save = ParseInt("save=", line);  
 
@@ -670,7 +661,7 @@ function Boolean MkCNNConfig.load(io MkCNNLayers layers) {
 
   return reader.close();
 }
-/*                                              Loss functions                                    */
-/**************************************************************************************************/
+//                                              Loss functions                                    //
+//************************************************************************************************//
 
  

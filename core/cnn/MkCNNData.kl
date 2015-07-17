@@ -1,12 +1,10 @@
-/**************************************************************************************************/
-/*                                                                                                */
-/*  Informations :                                                                                */
-/*      This code is part of the project MLKL                                                     */
-/*                                                                                                */
-/*  Contacts :                                                                                    */
-/*      couet.julien@gmail.com                                                                    */
-/*                                                                                                */
-/**************************************************************************************************/
+//************************************************************************************************//
+//                                                                                                //
+//  Code part of the project MLKL                                                                 //
+//                                                                                                //
+//  couet.julien@gmail.com                                                                        //
+//                                                                                                //
+//************************************************************************************************//
 
 require MLKL, MkCNNCpp;
 require FileIO, Util, OpenImageIO;
@@ -40,14 +38,31 @@ inline NormalizeImages(Float64 scale_min, Float64 scale_max, io Float64 images[]
     NormalizeImage(scale_min, scale_max, images[i]);
 }
 
+/// Display in the console
+private MkCNNData.display(String data_origin, MkCNNConfig config) {
+  report("\n\n\n-------------------- " + data_origin + " data --------------------");
+  report("Training number  : " + this.train_images.size());
+  report("Testing number   : " + this.test_images.size());
+  report("Image size       : " + Index(sqrt(this.train_images[0].size())) + 
+         "x" + Index(sqrt(this.train_images[0].size())));
+  report("Train image path : " + config.train_images_path);
+  report("Train label path : " + config.train_labels_path);
+  report("Test image path  : " + config.test_images_path);
+  report("Test label path  : " + config.test_labels_path);
+}
+
+/// Load MNIST data for training
 public MkCNNData.loadTrainingMNIST!(MkCNNConfig config) {
   MkCNNCpp mnist();
   this.train_images = mnist.readImages_MNIST(config.train_images_path, -1.0, 1.0, 2, 2);
   this.test_images = mnist.readImages_MNIST(config.test_images_path, -1.0, 1.0, 2, 2);
   this.train_labels = mnist.readLabels_MNIST(config.train_labels_path);
   this.test_labels = mnist.readLabels_MNIST(config.test_labels_path); 
+  this.display("MNIST", config);
 }
 
+/// Load MNIST data for training
+/// Load a 8bits .png image
 function Float64[] MkCNNData.loadValidationMNIST!(String path, Float64 scale_min, Float64 scale_max) {
   
   OpenImageInput oiio(path);
@@ -60,7 +75,6 @@ function Float64[] MkCNNData.loadValidationMNIST!(String path, Float64 scale_min
   Data data = bytes.data();
   oiio.read_image(desc, data, 0, 0, 0);
 
-  // mnist dataset is "white on black", so negate required
   Float64 image[];
   image.resize(spec.get_full_width() * spec.get_full_height());
   for(Index i=0; i<image.size(); ++i)
@@ -68,7 +82,6 @@ function Float64[] MkCNNData.loadValidationMNIST!(String path, Float64 scale_min
   
   // Normalize the iamge between 0 and 1
   NormalizeImage(scale_min, scale_max, image);
-
   return image;
 }
 
