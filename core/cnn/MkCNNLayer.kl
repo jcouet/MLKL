@@ -47,6 +47,8 @@ interface MkCNNLayer {
 	Index connectionSize();
   Float64[] weights();
   Float64[] bias();
+  Float64[] weightsDiff(Index index);
+  Float64[] biasDiff(Index index);
   weights!(Float64 w[]);
   bias!(Float64 b[]);
   Float64[] output(Index index);
@@ -60,9 +62,9 @@ interface MkCNNLayer {
   Ref<MkCNNLayer> next();
   next!(Ref<MkCNNLayer> hs);
   Ref<MkCNNNeuron> neuron();
-  Float64[] fprop!(Float64 ins[], Index index);
-  Float64[] bprop!(Float64 current_delta[], Index index);
-  Float64[] bprop2nd!(Float64 current_delta2[]);
+  Float64[] forward!(Float64 ins[], Index index);
+  Float64[] backward!(Float64 current_delta[], Index index);
+  Float64[] backward2!(Float64 current_delta2[]);
 };
 
 /// Base class of all kind of NN layers
@@ -80,8 +82,8 @@ object MkCNNLayerBase : MkCNNLayer {
   protected Float64 db[][];           // Difference of bias vector
   protected Float64 w_hessian[];      // Diagonal terms of the weight hessian matrix 
   protected Float64 b_hessian[];      // Diagonal terms of the bias hessian matrix 
-  protected Float64 output[][];       // Last output of current layer, set by fprop
-  protected Float64 prev_delta[][];   // Last delta of previous layer, set by bprop
+  protected Float64 output[][];       // Last output of current layer, set by forward
+  protected Float64 prev_delta[][];   // Last delta of previous layer, set by backward
   protected Float64 prev_delta2[];    // d^2E/da^2
   protected MkCNNNeuron neuron;       // Neuron function
   protected Ref<MkCNNLayer> next;     // Reference to the next layer, foward propagation
@@ -268,6 +270,16 @@ public MkCNNLayerBase.bias!(Float64 b[]) {
   this.b = b;
 }
 
+/// Return the weights difference
+public Float64[] MkCNNLayerBase.weightsDiff(Index index) {
+  return this.dw[index];
+}
+
+/// Return the bias difference
+public Float64[] MkCNNLayerBase.biasDiff(Index index) {
+  return this.db[index];
+}
+
 /// Return a the layer's output at a given worker_index
 protected Float64[] MkCNNLayerBase.output(Index index) { 
 	return this.output[index]; 
@@ -356,29 +368,21 @@ protected MkCNNLayerBase.postUpdate!() {}
 
 /// When using several workers (threads), merge the bias and weight differences
 protected MkCNNLayerBase.merge!(Index worker_size, Index batch_size) {
-
-  //for (Index i=1; i<worker_size; i++) {
-  //  for(Index j=0; j<this.dw[i].size(); ++j) 
-  //    this.dw[0][j] += this.dw[i][j];  
-  //
-  //  for(Index j=0; j<this.db[i].size(); ++j) 
-  //    this.db[0][j] += this.dw[i][j];  
-  //}
-  for(Index j=0; j<this.dw[0].size(); ++j) 
-    this.dw[0][j] /= Float64(batch_size);  
-  for(Index j=0; j<this.db[0].size(); ++j) 
-    this.db[0][j] /= Float64(batch_size);  
+  for (Index i=1; i<worker_size; i++) 
+  {
+    for(Index j=0; j<this.dw[i].size(); ++j) this.dw[0][j] += this.dw[i][j];  
+    for(Index j=0; j<this.db[i].size(); ++j) this.db[0][j] += this.dw[i][j];  
+  }
+  for(Index j=0; j<this.dw[0].size(); ++j) this.dw[0][j] /= Float64(batch_size);  
+  for(Index j=0; j<this.db[0].size(); ++j) this.db[0][j] /= Float64(batch_size);  
 }
 
 /// Update the layer weights, after each batch iteration
 public MkCNNLayerBase.updateWeights!(io Ref<MkCNNOptimizer> opti, Index worker_size, Index batch_size) {
-  
   if (this.w.size() == 0) return;
-
   this.merge(worker_size, batch_size);
-  opti.update(this.dw[0], this.w_hessian, this.w);
-  opti.update(this.db[0], this.b_hessian, this.b);
-
+  opti.update(this.uid(), this.dw[0], this.w_hessian, this.w);
+  opti.update(this.uid()*2, this.db[0], this.b_hessian, this.b);
   this.clearDiff(worker_size);
   this.postUpdate();
 }
@@ -390,17 +394,17 @@ public MkCNNLayerBase.divideHessian!(Index deno) {
 }
 
 /// Forward propagation
-public Float64[] MkCNNLayerBase.fprop!(Float64 ins[], Index index) {
+public Float64[] MkCNNLayerBase.forward!(Float64 ins[], Index index) {
   return ins;
 }
 
 /// Backward propagetion 
-public Float64[] MkCNNLayerBase.bprop!(Float64 current_delta[], Index index) {
+public Float64[] MkCNNLayerBase.backward!(Float64 current_delta[], Index index) {
   return current_delta;
 }
 
 /// 2nd Backward propagetion 
-public Float64[] MkCNNLayerBase.bprop2nd!(Float64 current_delta2[]) {
+public Float64[] MkCNNLayerBase.backward2!(Float64 current_delta2[]) {
   return current_delta2;
 }
 //                                                  Layer                                         //
@@ -440,18 +444,18 @@ public Index MkCNNLayerData.fanInSize() {
 }
 
 /// Forward propagation
-public Float64[] MkCNNLayerData.fprop!(Float64 ins[], Index index) {
+public Float64[] MkCNNLayerData.forward!(Float64 ins[], Index index) {
   this.output[index] = ins;
-  return (this.next()) ? this.next().fprop(ins, index) : this.output[index];
+  return (this.next()) ? this.next().forward(ins, index) : this.output[index];
 }
 
 /// Backward propagetion 
-public Float64[] MkCNNLayerData.bprop!(Float64 current_delta[], Index index) {
+public Float64[] MkCNNLayerData.backward!(Float64 current_delta[], Index index) {
   return current_delta;
 }
 
 /// 2nd Backward propagetion 
-public Float64[] MkCNNLayerData.bprop2nd!(Float64 current_delta2[]) {
+public Float64[] MkCNNLayerData.backward!(Float64 current_delta2[]) {
   return current_delta2;
 }
 //                                                Input Layer                                     //
@@ -491,7 +495,8 @@ private MkCNNLayerMaxPooling.connectKernel!(
 
 /// Set the kernel connections
 private MkCNNLayerMaxPooling.initConnection!(
-  Index in_width, Index in_height, 
+  Index in_width, 
+  Index in_height, 
   Index in_channels, 
   Index pooling_size) 
 {
@@ -570,7 +575,7 @@ public Index MkCNNLayerMaxPooling.fanInSize() {
 }
 
 /// Parallel task for Forward propagation
-operator MkCNNLayerMaxPoolingFprop_task<<<i>>>(
+operator MkCNNLayerMaxPoolingForward_task<<<i>>>(
   Float64 ins[],
   Index out2in[][],
   io Index out2in_max[],
@@ -591,26 +596,26 @@ operator MkCNNLayerMaxPoolingFprop_task<<<i>>>(
 }
 
 /// Forward propagation
-public Float64[] MkCNNLayerMaxPooling.fprop!(Float64 ins[], Index index) {
+public Float64[] MkCNNLayerMaxPooling.forward!(Float64 ins[], Index index) {
   
   Index out2in[][] = this.out2in;
   Index out2in_max[] = this.out2in_max;
   Float64 output[] = this.output[index];
-  //report("MkCNNLayerMaxPooling.fprop 1");
+  //report("MkCNNLayerMaxPooling.forward 1");
 
-  MkCNNLayerMaxPoolingFprop_task<<<this.out_size>>>(
+  MkCNNLayerMaxPoolingForward_task<<<this.out_size>>>(
     ins,
     out2in,
     out2in_max,
     output);
   
-  //report("MkCNNLayerMaxPooling.fprop 2");
+  //report("MkCNNLayerMaxPooling.forward 2");
 
-  return (this.next()!= null) ? this.next().fprop(output, index) : output;
+  return (this.next()!= null) ? this.next().forward(output, index) : output;
 }
 
 /// Parallel task for Backward propagation
-operator MkCNNLayerMaxPoolingBprop_task<<<i>>>(
+operator MkCNNLayerMaxPoolingBackward_task<<<i>>>(
   Ref<MkCNNNeuron> prev_h,
   Index out2in_max[],
   Index in2out[][],
@@ -623,7 +628,7 @@ operator MkCNNLayerMaxPoolingBprop_task<<<i>>>(
 }
 
 /// Backward propagetion 
-public Float64[] MkCNNLayerMaxPooling.bprop!(Float64 current_delta[], Index index) {
+public Float64[] MkCNNLayerMaxPooling.backward!(Float64 current_delta[], Index index) {
   
   Ref<MkCNNNeuron> prev_h = this.prev().neuron();
   Float64 prev_output[] = this.prev().output(index);
@@ -631,7 +636,7 @@ public Float64[] MkCNNLayerMaxPooling.bprop!(Float64 current_delta[], Index inde
   Index in2out[][] = this.in2out;
   Index out2in_max[] = this.out2in_max;
  
-  MkCNNLayerMaxPoolingBprop_task<<<this.in_size>>>(
+  MkCNNLayerMaxPoolingBackward_task<<<this.in_size>>>(
     prev_h,
     out2in_max,
     in2out,
@@ -639,11 +644,11 @@ public Float64[] MkCNNLayerMaxPooling.bprop!(Float64 current_delta[], Index inde
     current_delta,
     prev_delta);
 
-  return this.prev().bprop(this.prev_delta[index], index);
+  return this.prev().backward(this.prev_delta[index], index);
 }
 
 /// Parallel task for 2nd Backward propagation
-operator MkCNNLayerMaxPoolingBprop2nd_task<<<i>>>(
+operator MkCNNLayerMaxPoolingBackward2_task<<<i>>>(
   Ref<MkCNNNeuron> prev_h,
   Index out2in_max[],
   Index in2out[][],
@@ -656,7 +661,7 @@ operator MkCNNLayerMaxPoolingBprop2nd_task<<<i>>>(
 }
 
 /// 2nd Backward propagetion 
-public Float64[] MkCNNLayerMaxPooling.bprop2nd!(Float64 current_delta2[]) {
+public Float64[] MkCNNLayerMaxPooling.backward2!(Float64 current_delta2[]) {
 
   Ref<MkCNNNeuron> prev_h = this.prev().neuron();
   Float64 prev_output[] = this.prev().output(0);
@@ -664,7 +669,7 @@ public Float64[] MkCNNLayerMaxPooling.bprop2nd!(Float64 current_delta2[]) {
   Index in2out[][] = this.in2out;
   Index out2in_max[] = this.out2in_max;  
   
-  MkCNNLayerMaxPoolingBprop2nd_task<<<this.in_size>>>(
+  MkCNNLayerMaxPoolingBackward2_task<<<this.in_size>>>(
     prev_h,
     out2in_max,
     in2out,
@@ -672,7 +677,7 @@ public Float64[] MkCNNLayerMaxPooling.bprop2nd!(Float64 current_delta2[]) {
     current_delta2,
     prev_delta2);
 
-  return this.prev().bprop2nd(this.prev_delta2);
+  return this.prev().backward2(this.prev_delta2);
 }
 //                                            Max-pooling Layer                                   //
 //************************************************************************************************//

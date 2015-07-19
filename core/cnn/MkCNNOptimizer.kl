@@ -10,20 +10,27 @@ require MLKL;
  
 
 //************************************************************************************************//
-//                                             2. ASM Batches                                     //
+//                                               Optimizer                                        //
 const Index MK_OPTIMIZER_GD = 0;
 const Index MK_OPTIMIZER_GDLM = 1;
- 
+const Index MK_OPTIMIZER_AGD = 2;
+const Index MK_OPTIMIZER_RMSP = 3;
+const Index MK_OPTIMIZER_MGD = 4;
+
 function String MkCNNOptimizerModeAsStr(Index mode) {
   if(mode == MK_OPTIMIZER_GD) return "MK_OPTIMIZER_GD";    
   else if(mode == MK_OPTIMIZER_GDLM) return "MK_OPTIMIZER_GDLM";
+  else if(mode == MK_OPTIMIZER_AGD) return "MK_OPTIMIZER_AGD";
+  else if(mode == MK_OPTIMIZER_RMSP) return "MK_OPTIMIZER_RMSP";
+  else if(mode == MK_OPTIMIZER_MGD) return "MK_OPTIMIZER_MGD";
   else return "MK_OPTIMIZER_UNKNOWN";
 }
 
+/// Interface for optimizer
 interface MkCNNOptimizer {
   Index mode();
   String modeAsStr();
-  update!(Float64 dw[], Float64 H[], io Float64 W[]);
+  update!(UInt64 layer_uid, Float64 dw[], Float64 h[], io Float64 w[]);
   Boolean requiresHessian();
   learningRate!(Float64 learning_rate);
   weigthDecay!(Float64 weigth_decay);
@@ -33,12 +40,18 @@ interface MkCNNOptimizer {
   reset!();
 };
 
-///
+/// Base class for optimizer
 object MkCNNOptimizerBase : MkCNNOptimizer {  
   protected Index mode;
-  protected Float64 learning_rate;  // Learning rate
-  protected Float64 weigth_decay;   // Weight decay
+  Float64 learning_rate;  // Learning rate
+  Float64 weigth_decay;   // Weight decay
 };
+
+/// Init the optimizer value
+protected MkCNNOptimizerBase.init!(Float64 learning_rate, Float64 weigth_decay) {
+  this.learning_rate = learning_rate;
+  this.weigth_decay = weigth_decay;
+}
 
 /// Return the current mode, either MK_LOSS_CE or MK_LOSS_MSE
 public Index MkCNNOptimizerBase.mode() {
@@ -55,22 +68,6 @@ public MkCNNOptimizerBase.display() {
   report("optimizer        : " + this.modeAsStr());
   report("learning_rate    : " + this.learning_rate);
   report("weigthDecay      : " + this.weigth_decay);
-}
-
-/// Update the optimizer
-/// To-be overload
-public MkCNNOptimizerBase.update!(Float64 dw[], Float64 H[], io Float64 w[]) {}
-
-/// Return TRUE if the optimizer needs an Hessian matrix
-/// To-be overload
-public Boolean MkCNNOptimizerBase.requiresHessian() {
-  return false;
-}
-
-/// Init the optimizer value
-protected MkCNNOptimizerBase.init!(Float64 learning_rate, Float64 weigth_decay) {
-  this.learning_rate = learning_rate;
-  this.weigth_decay = weigth_decay;
 }
 
 /// Set the learning rate
@@ -94,133 +91,263 @@ public Float64 MkCNNOptimizerBase.weigthDecay() {
 }
 
 /// Reset
-/// To-be overload
 public MkCNNOptimizerBase.reset!() {}
-//                                       end Constructor/Destructor                               //
+
+/// Return TRUE if the optimizer needs an Hessian matrix
+public Boolean MkCNNOptimizerBase.requiresHessian() {
+  return false;
+}
+
+/// Update the optimizer
+/// To-be overload
+public MkCNNOptimizerBase.update!(
+  UInt64 layer_uid,
+  Float64 dw[], 
+  Float64 h[], 
+  io Float64 w[]) 
+{
+}
+//                                               Optimizer                                        //
 //************************************************************************************************//
 
                                           //*********************//
 
 //************************************************************************************************//
-//                                             2. ASM Batches                                     //
+//                                            Gradient Descente                                   //
+/// Class for gradient descente optimizer
 object MkCNNOptimizerGD : MkCNNOptimizerBase {};
 
+/// Constructor
 public MkCNNOptimizerGD() {
+  this.init(0.01, 0.1);
   this.mode = MK_OPTIMIZER_GD;
-  this.init(0.01, 0.02);
 }
  
 public MkCNNOptimizerGD(Float64 learning_rate, Float64 weigth_decay) {
-  this.init(learning_rate, weigth_decay);
+  this.parent.init(learning_rate, weigth_decay);
+  this.mode = MK_OPTIMIZER_GD;
 }
 
-operator MkCNNOptimizerGDUpdate_task<<<i>>>(Ref<MkCNNOptimizerGD> gd, Float64 dw[], io Float64 w[]) {
-  w[i] -= (gd.learningRate() / (w[i] + gd.weigthDecay())) * (dw[i]); 
+operator MkCNNOptimizerGDUpdate_task<<<i>>>(Ref<MkCNNOptimizerGD> opti, Float64 dw[], io Float64 w[]) {
+  w[i] = w[i] - opti.learningRate() * (dw[i] + opti.weigthDecay() * w[i]); 
 }
 
-public MkCNNOptimizerGD.update!(Float64 dw[], Float64 H[], io Float64 w[]) {
+public MkCNNOptimizerGD.update!(
+  UInt64 layer_uid,
+  Float64 dw[], 
+  Float64 h[], 
+  io Float64 w[]) 
+{
   MkCNNOptimizerGDUpdate_task<<<w.size()>>>(this, dw, w);
 }
-
-public Boolean MkCNNOptimizerGD.requiresHessian() {
-  return false;
-}
-//                                       end Constructor/Destructor                               //
+//                                            Gradient Descente                                   //
 //************************************************************************************************//
 
-                                          /***********************/
+                                          //*********************//
 
 //************************************************************************************************//
-//                                             2. ASM Batches                                     //
+//                                    Gradient Descente Levenbarq-Marquant                        //
+/// Class for gradient descente Levenbarq-Marquant optimizer
 object MkCNNOptimizerGDLM : MkCNNOptimizerBase {};
 
+/// Constructor
 public MkCNNOptimizerGDLM() {
-  this.mode = MK_OPTIMIZER_GDLM;
+  // constant to prevent step size from becoming too large when H is small
   this.init(0.00085, 0.02);
+  this.mode = MK_OPTIMIZER_GDLM;
 }
  
 public MkCNNOptimizerGDLM(Float64 learning_rate, Float64 weigth_decay) {
   this.init(learning_rate, weigth_decay);
+  this.mode = MK_OPTIMIZER_GDLM;
 }
 
 operator MkCNNOptimizerGDLMUpdate_task<<<i>>>(
-  Ref<MkCNNOptimizerGDLM> gdlm,
+  Ref<MkCNNOptimizerGDLM> opti,
   Float64 dw[], 
-  Float64 H[], 
+  Float64 h[], 
   io Float64 w[]) 
 {
-  w[i] = w[i] - (gdlm.learningRate() / (H[i] + gdlm.weigthDecay())) * (dw[i]); 
+  w[i] = w[i] - (opti.learningRate() / (h[i] + opti.weigthDecay()) ) * dw[i]; 
 }
 
-public MkCNNOptimizerGDLM.update!(Float64 dw[], Float64 H[], io Float64 w[]) {
-  MkCNNOptimizerGDLMUpdate_task<<<w.size()>>>(this, dw, H, w);
-}
-
-public MkCNNOptimizerGDLM.display() {
-  //report("learning_rate GDLM " + this.learning_rate);
-  //report("weigthDecay GDLM " + this.weigth_decay);
+public MkCNNOptimizerGDLM.update!(
+  UInt64 layer_uid,
+  Float64 dw[], 
+  Float64 h[],   
+  io Float64 w[]) 
+{
+  MkCNNOptimizerGDLMUpdate_task<<<w.size()>>>(this, dw, h, w);
 }
 
 public Boolean MkCNNOptimizerGDLM.requiresHessian() {
   return true;
 }
-//                                       end Constructor/Destructor                               //
+//                                    Gradient Descente Levenbarq-Marquant                        //
 //************************************************************************************************//
 
                                           //*********************//
 
 //************************************************************************************************//
-//                                             2. ASM Batches                                     //
-// http://xcorr.net/2014/01/23/adagrad-eliminating-learning-rates-in-stochastic-gradient-descent/
-/*
-object MkCNNOptimizerADAGRAD : MkCNNOptimizer {  
-  Float64 learning_rate;      // learning rate
-  Float64 E[MkHashTable][];
+//                                           Stateful optimizers                                  //
+/// Base class for optimizer
+object MkCNNOptimizerStatefulBase : MkCNNOptimizerBase {  
+  protected Float64 E[UInt64][];
+  Float64 eps;
 };
 
-public MkCNNOptimizerADAGRAD() {
-  
-  this.learning_rate = 0.01;
-}
- 
-public MkCNNOptimizerADAGRAD(Float64 learning_rate) {
-  
-  this.learning_rate = learning_rate;
+/// Init the optimizer value
+protected MkCNNOptimizerStatefulBase.init!(Float64 learning_rate, Float64 weigth_decay) {
+  this.parent.init(learning_rate, weigth_decay);
+  this.eps = 1.e-8;
 }
 
-operator MkCNNOptimizerADAGRADUpdate_task<<<i>>>(
-  io MkCNNOptimizerADAGRAD gdlm,
-  Float64 dw[], 
-  io Float64 w[]) 
-{
-  gdlm.E[i] += dw[i] * dw[i];
-  //w[i] -= gdlm.learning_rate * dw[i] / sqrt(gdlm.E[i]);
-}
-
-public MkCNNOptimizerADAGRAD.update(
-  Float64 dw[], 
-  io Float64 w[]) 
-{
-  if(!E.has(HashTable(w)));
+public Float64[] MkCNNOptimizerStatefulBase.get!(UInt64 layer_uid, Float64 w[]) {
+  if(!this.E.has(layer_uid))
   {
-
+    Float64 temp[]; temp.resize(w.size());   
+    this.E.set(layer_uid, temp);
   }
-  if(this.E[w].empty())
-    this.E[w] = ;
-
-  MkCNNOptimizerADAGRADUpdate_task<<<w.sixe()>>>(this, dw, w);
+  return this.E.get(layer_uid);
 }
 
-public MkCNNOptimizerADAGRAD.reset() {
-  
+public MkCNNOptimizerStatefulBase.set!(UInt64 layer_uid, Float64 g[]) {
+  if(this.E.has(layer_uid))
+    this.E.set(layer_uid, g);
+}
+
+public MkCNNOptimizerStatefulBase.reset!() {
   this.E.clear();
 }
-
-public Boolean MkCNNOptimizerADAGRAD.requiresHessian() {
-
-  return false;
-}
-*/
-//                                       end Constructor/Destructor                               //
+//                                           Stateful optimizers                                  //
 //************************************************************************************************//
+
+                                          //*********************//
+
+//************************************************************************************************//
+//                                       Adaptive Gradient Descente                               //
+// J. Duchi, E. Hazan and Y. Singer,
+// Adaptive subgradient methods for online learning and stochastic optimization
+// The Journal of Machine Learning Research, pages 2121-2159, 2011.
+// http://xcorr.net/2014/01/23/adagrad-eliminating-learning-rates-in-stochastic-gradient-descent/
+object MkCNNOptimizerAGD : MkCNNOptimizerStatefulBase {};
+
+public MkCNNOptimizerAGD() {
+  this.parent.init(0.01, 0.0);
+  this.mode = MK_OPTIMIZER_AGD;
+}
  
+public MkCNNOptimizerAGD(Float64 learning_rate) {
+  this.parent.init(learning_rate, 0.0);
+  this.mode = MK_OPTIMIZER_AGD;
+}
+
+operator MkCNNOptimizerAGDUpdate_task<<<i>>>(
+  Ref<MkCNNOptimizerAGD> opti,
+  Float64 dw[], 
+  io Float64 w[],
+  io Float64 g[]) 
+{
+  g[i] += dw[i] * dw[i];
+  w[i] = w[i] - opti.learning_rate * dw[i] / (sqrt(g[i]) + opti.eps);
+}
+
+public MkCNNOptimizerAGD.update!(
+  UInt64 layer_uid,
+  Float64 dw[], 
+  Float64 h[],   
+  io Float64 w[]) 
+{
+  Float64 g[] = this.get(layer_uid, w);
+  MkCNNOptimizerAGDUpdate_task<<<w.size()>>>(this, dw, w, g);
+  this.set(layer_uid, g);
+}
+//                                       Adaptive Gradient Descente                               //
+//************************************************************************************************//
+
+                                          //*********************//
+
+//************************************************************************************************//
+//                                                RMS Prop                                        //
+// T. Tielemanand G.E. Hinton,
+// Lecture 6.5 - rmsprop, COURSERA: Neural Networks for Machine Learning (2012)
+object MkCNNOptimizerRMSP : MkCNNOptimizerStatefulBase {};
+
+public MkCNNOptimizerRMSP() {
+  this.parent.init(0.0001, 0.99);
+  this.mode = MK_OPTIMIZER_RMSP;
+}
+ 
+public MkCNNOptimizerRMSP(Float64 learning_rate, Float64 weigth_decay) {
+  this.parent.init(learning_rate, weigth_decay);
+  this.mode = MK_OPTIMIZER_RMSP;
+}
+
+operator MkCNNOptimizerRMSPUpdate_task<<<i>>>(
+  Ref<MkCNNOptimizerRMSP> opti,
+  Float64 dw[], 
+  io Float64 w[],
+  io Float64 g[]) 
+{
+  g[i] = opti.weigth_decay * g[i] + (1.0 - opti.weigth_decay) * dw[i] * dw[i];
+  w[i] = w[i] - opti.learning_rate * dw[i] / (sqrt(g[i]) + opti.eps);
+}
+
+public MkCNNOptimizerRMSP.update!(
+  UInt64 layer_uid,
+  Float64 dw[], 
+  Float64 h[],   
+  io Float64 w[]) 
+{
+  Float64 g[] = this.get(layer_uid, w);
+  MkCNNOptimizerRMSPUpdate_task<<<w.size()>>>(this, dw, w, g);
+  this.set(layer_uid, g);
+}
+//                                                RMS Prop                                        //
+//************************************************************************************************//
+
+                                          //*********************//
+
+//************************************************************************************************//
+//                                       Adaptive Gradient Descente                               //
+// SGD with Momentum, B T Polyak,
+// Some methods of speeding up the convergence of iteration methods
+// USSR Computational Mathematics and Mathematical Physics, 4(5):1-17, 1964.
+object MkCNNOptimizerMGD : MkCNNOptimizerStatefulBase {
+  Float64 mu; // Momentum
+};
+
+public MkCNNOptimizerMGD() {
+  this.parent.init(0.01, 0.0);
+  this.mu = 0.9;
+  this.mode = MK_OPTIMIZER_MGD;
+}
+ 
+public MkCNNOptimizerMGD(Float64 learning_rate, Float64 weigth_decay) {
+  this.parent.init(learning_rate, weigth_decay);
+  this.mu = 0.9;
+  this.mode = MK_OPTIMIZER_MGD;
+}
+
+operator MkCNNOptimizerMGDUpdate_task<<<i>>>(
+  Ref<MkCNNOptimizerMGD> opti,
+  Float64 dw[], 
+  io Float64 w[],
+  io Float64 g[]) 
+{
+  g[i] = opti.mu * g[i] - opti.learning_rate * (dw[i] + w[i] * opti.weigth_decay);
+  w[i] += g[i];
+}
+
+public MkCNNOptimizerMGD.update!(
+  UInt64 layer_uid,
+  Float64 dw[], 
+  Float64 h[],   
+  io Float64 w[]) 
+{
+  Float64 g[] = this.get(layer_uid, w);
+  MkCNNOptimizerMGDUpdate_task<<<w.size()>>>(this, dw, w, g);
+  this.set(layer_uid, g);
+}
+//                                       Adaptive Gradient Descente                               //
+//************************************************************************************************//

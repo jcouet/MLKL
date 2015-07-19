@@ -8,6 +8,7 @@
 
 require MLKL; 
 
+
 /**
   The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
   It provides access to the higher level reader objects such as the AlembicXformReader.
@@ -22,61 +23,75 @@ require MLKL;
   \endexample
 */
 
-
 //************************************************************************************************//
 //                                               None filter                                      //
 /// Interface for filters
 interface MkCNNFilter {
   Index mode();
+  mode!(Index mode);
   Index context();
   context!(Index context);
   Float64 dropoutRate();
   dropoutRate!(Float64 rate);
   endBatch!();
-  Float64[] filterFProp!(Float64 outs[], Index index);
-  Float64[] filterBProp!(Float64 delta[], Index index);
+  Float64[] filterForward!(Float64 outs[], Index index);
+  Float64[] filterBackward!(Float64 delta[], Index index);
 };
 
 /// Class for no-filter ~ base class 
-object MkCNNFilterNone : MkCNNFilter {};
+object MkCNNFilterNone : MkCNNFilter {
+  protected MkCNNDefs defs;
+  protected Index mode;
+  protected Index context;
+  protected Float64 dropout_rate;
+};
 
 /// Constructor
 function MkCNNFilterNone(Index out_size) {}
 
+/// Return drop-out rate
+public Float64 MkCNNFilterNone.dropoutRate() {
+  return this.dropout_rate;
+}
+
+/// Set drop-out rate
+public MkCNNFilterNone.dropoutRate!(Float64 rate) {
+  if(rate < 0.0 || rate >= 1.0) return;
+  this.dropout_rate = rate;
+}
 
 /// Return the filter mode
 public Index MkCNNFilterNone.mode() {
   return this.mode;
 }
 
-/// Return the context
-public Index MkCNNFilterNone.context() {
-  return 0;
+/// Return the filter mode
+public MkCNNFilterNone.mode!(Index mode) {
+  this.mode = mode;
 }
 
 /// Set the context
-public MkCNNFilterNone.context!(Index context) {}
-
-/// Return the drop-out rate
-public Float64 MkCNNFilterNone.dropoutRate() {
-  return 0.0;
+public Index MkCNNFilterNone.context() {
+  return this.context;
 }
 
-/// Set drop-out rate
-public MkCNNFilterNone.dropoutRate!(Float64 rate) {}
+/// Return the context
+public MkCNNFilterNone.context!(Index context) {
+  this.context = context;
+}
 
 /// \Internal
-private MkCNNFilterNone.shuffle!() {}
+protected MkCNNFilterNone.shuffle!() {}
 
 public MkCNNFilterNone.endBatch!() {}
 
 /// Do nothing
-public Float64[] MkCNNFilterNone.filterFProp!(Float64 outs[], Index index) {
+public Float64[] MkCNNFilterNone.filterForward!(Float64 outs[], Index index) {
   return outs;
 }
 
 /// Do nothing
-public Float64[] MkCNNFilterNone.filterBProp!(Float64 delta[], Index index) {
+public Float64[] MkCNNFilterNone.filterBackward!(Float64 delta[], Index index) {
   return delta;
 }
 //                                               None filter                                      //
@@ -87,21 +102,16 @@ public Float64[] MkCNNFilterNone.filterBProp!(Float64 delta[], Index index) {
 //************************************************************************************************//
 //                                             Drop-out filter                                    //
 const Index DROPOUT_CONTEXT_TRAIN_PHASE = 0;
-const Index DROPOUT_CONTEXT_TEST_PHASE  = 1;
-const Index DROPOUT_MODE_PER_DATA       = 0;
-const Index DROPOUT_MODE_PER_BATCH      = 1;
-
+const Index DROPOUT_CONTEXT_TEST_PHASE = 1;
+const Index DROPOUT_MODE_PER_DATA = 0;
+const Index DROPOUT_MODE_PER_BATCH = 1;
 
 /// Class for drop-out layer 
-object MkCNNDropout : MkCNNFilter {
-  private MkCNNDefs defs;
-  private Index mode;
+object MkCNNDropout : MkCNNFilterNone {
   private Index mask[];
-  private Index context;
   private Index out_size;
   private Float64 masked_out[][];
   private Float64 masked_delta[][];
-  private Float64 dropout_rate;
 };
 
 /// Constructor
@@ -122,38 +132,6 @@ function MkCNNDropout(Index out_size) {
   this.shuffle();
 }
 
-/// Return drop-out rate
-public Float64 MkCNNDropout.dropoutRate() {
-  return this.dropout_rate;
-}
-
-/// Set drop-out rate
-public MkCNNDropout.dropoutRate!(Float64 rate) {
-  if(rate < 0.0 || rate >= 1.0) return;
-  this.dropout_rate = rate;
-}
-
-/// Return the filter mode
-public Index MkCNNDropout.mode() {
-  return this.mode;
-}
-
-/// Return the filter mode
-public MkCNNDropout.mode!(Index mode) {
-  this.mode = mode;
-}
-
-
-/// Set the context
-public Index MkCNNDropout.context() {
-  return this.context;
-}
-
-/// Return the context
-public MkCNNDropout.context!(Index context) {
-  this.context = context;
-}
-
 /// \Internal
 private MkCNNDropout.shuffle!() {
   for(Index i=0; i<this.mask.size(); ++i)
@@ -166,7 +144,7 @@ public MkCNNDropout.endBatch!() {
 }
 
 /// Return the mask output vector
-public Float64[] MkCNNDropout.filterFProp!(Float64 outs[], Index index) {
+public Float64[] MkCNNDropout.filterForward!(Float64 outs[], Index index) {
 
   if (this.context == DROPOUT_CONTEXT_TRAIN_PHASE) 
     for (Index i = 0; i < this.out_size; i++)
@@ -180,7 +158,7 @@ public Float64[] MkCNNDropout.filterFProp!(Float64 outs[], Index index) {
 }
 
 /// Return the mask delta
-public Float64[] MkCNNDropout.filterBProp!(Float64 delta[], Index index) {
+public Float64[] MkCNNDropout.filterBackward!(Float64 delta[], Index index) {
   
   for (Index i = 0; i < this.out_size; i++)
     this.masked_delta[index][i] = delta[i] * this.mask[i];

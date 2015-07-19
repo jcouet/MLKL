@@ -11,7 +11,7 @@ require MLKL;
 
 operator entry() {
 
-  String path_config = "C:/Users/Julien/Documents/Dev/MLKL/app/sample/cnn/cnn_config.mlkl";
+  String path_config = "C:/Users/Julien/Documents/Dev/MLKL/app/cnn/cnn_config.mlkl";
   String path_image = 'C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/4.bmp';
 
   // Load the configuration file and set the network layers
@@ -21,10 +21,11 @@ operator entry() {
     return;
 
   // Create the network
-  MkCNNNetwork nn(config.loss_function, config.optimizer, layers);
- 
+  MkCNNNetwork nn(config, layers);
+
   // Set the initiale learning rate
   nn.optimizer().learningRate(nn.optimizer().learningRate()* sqrt(config.batch_size));
+  nn.display();
 
   // Declare the enumeration, here we can set the larning rate decay
   // However, it should be set from the file, see Convnet for this
@@ -34,16 +35,11 @@ operator entry() {
   MkCNNData data;
   //data.loadTrainingMNIST(config);
   data.loadTrainingCIFAR();
-  report("train_images.size " + data.train_images.size());
-  report("train_labels.size " + data.train_labels.size());
-  report("tests_images.size " + data.test_images.size());
-  report("tests_labels.size " + data.test_labels.size());
+  
  
-  //report("data.train_images[0] " + data.train_images[0]);
-
   // Train the network
   // The network (the layers' weights) is tested and saved at each epch
-  nn.train(data, config, epoch_enum);
+  nn.train(config, data, epoch_enum);
 
 
   // Finally test it and save it

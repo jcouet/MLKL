@@ -8,6 +8,7 @@
 
 require MLKL; 
 
+
 /**
   The AlembicArchiveReader is a wrapper for the AlembicIArchive. 
   It provides access to the higher level reader objects such as the AlembicXformReader.
@@ -31,66 +32,47 @@ const Index MK_GRAD_CHECK_RANDOM = 2;
 object MkCNNNetwork {
   private String name;
   private MkCNNDefs defs;
-  private MkCNNOptimizer optimizer;
-  private MkCNNLoss loss_function;
   private MkCNNLayers layers;
+  private MkCNNLoss loss_function;
+  private MkCNNOptimizer optimizer;
 };
 
 /// Initilisation, called by the contructeurs and derived classes
-private MkCNNNetwork.init!(Index loss_function, Index optimizer, String name) {
+private MkCNNNetwork.init!(String name, MkCNNConfig config) {
   this.name = name;
   this.layers = MkCNNLayers();
 
-  switch(loss_function)
-  {
-    case MK_LOSS_MSE:
-      this.loss_function = MkCNNLossMSE();
-    break;
-    
-    case MK_LOSS_CE:
-      this.loss_function = MkCNNLossCE();
-    break;
-
-    default :
-      this.loss_function = MkCNNLossMSE();
-    break;
-  }
-
-  switch(optimizer)
-  {
-    case MK_OPTIMIZER_GD:
-      this.optimizer = MkCNNOptimizerGD();
-    break;
-    
-    case MK_OPTIMIZER_GDLM:
-      this.optimizer = MkCNNOptimizerGDLM();
-    break;
-
-    default :
-      this.optimizer = MkCNNOptimizerGD();
-    break;
-  }
+  if(config.loss_function == MK_LOSS_MSE) this.loss_function = MkCNNLossMSE();
+  else if(config.loss_function == MK_LOSS_CE) this.loss_function = MkCNNLossCE();
+  else this.loss_function = MkCNNLossMSE();
+ 
+  if(config.optimizer == MK_OPTIMIZER_GD) this.optimizer = MkCNNOptimizerGD();
+  else if(config.optimizer == MK_OPTIMIZER_GDLM) this.optimizer = MkCNNOptimizerGDLM();
+  else if(config.optimizer == MK_OPTIMIZER_AGD) this.optimizer = MkCNNOptimizerAGD();
+  else if(config.optimizer == MK_OPTIMIZER_RMSP) this.optimizer = MkCNNOptimizerRMSP();
+  else if(config.optimizer == MK_OPTIMIZER_MGD) this.optimizer = MkCNNOptimizerMGD();
+  else this.optimizer = MkCNNOptimizerGD();
 }
 
 /// Constructor
-public MkCNNNetwork(Index loss_function, Index optimizer, String name) {
-  this.init(loss_function, optimizer, name);
+public MkCNNNetwork(String name, MkCNNConfig config) {
+  this.init(name, config);
 }
 
 /// Constructor
-public MkCNNNetwork(Index loss_function, Index optimizer) {
-  this.init(loss_function, optimizer, "");
+public MkCNNNetwork(MkCNNConfig config) {
+  this.init("", config);
 }
 
 /// Constructor
-public MkCNNNetwork(Index loss_function, Index optimizer, String name, io MkCNNLayer layers[]) {
-  this.init(loss_function, optimizer, name);
+public MkCNNNetwork(String name, MkCNNConfig config, io MkCNNLayer layers[]) {
+  this.init(name, config);
   this.add(layers);
 }
 
 /// Constructor
-public MkCNNNetwork(Index loss_function, Index optimizer, io MkCNNLayer layers[]) {
-  this.init(loss_function, optimizer, "");
+public MkCNNNetwork(MkCNNConfig config, io MkCNNLayer layers[]) {
+  this.init("", config);
   this.add(layers);
 }
 
@@ -138,7 +120,7 @@ public MkCNNNetwork.add!(io MkCNNLayer layers[]) {
 }
 
 /// Train the network
-public MkCNNNetwork.train!(MkCNNData data, io MkCNNConfig config, io MkCNNEnumEpoch epoch_enum) {
+public MkCNNNetwork.train!(io MkCNNConfig config, MkCNNData data, io MkCNNEnumEpoch epoch_enum) {
     
   Index batch_size = config.batch_size;
   Index nb_epoch = config.epoch;
@@ -149,10 +131,7 @@ public MkCNNNetwork.train!(MkCNNData data, io MkCNNConfig config, io MkCNNEnumEp
    
   // If there a saved network weights file, load the layers weigths
   if(config.load_file_path.length())
-  {
-    if(!config.load(this.layers))
-      return;
-  }
+    if(!config.load(this.layers)) return;
 
   MkCNNEnumBatch enum_batch(data.train_images.size(), batch_size); 
   
@@ -184,7 +163,7 @@ public MkCNNNetwork.train!(MkCNNData data, io MkCNNConfig config, io MkCNNEnumEp
 
 /// Return the prediction of the input
 public Float64[] MkCNNNetwork.predict!(Float64 ins[]) {
-  return this.fprop(ins, 0);
+  return this.forward(ins, 0);
 }
 
 inline Float64 RescaleTemp(Float64 x) {
@@ -193,7 +172,7 @@ inline Float64 RescaleTemp(Float64 x) {
 
 /// Return the prediction of the input
 public Float64[] MkCNNNetwork.predictRescale!(Float64 ins[]) {
-  Float64 outs[] = this.fprop(ins, 0);
+  Float64 outs[] = this.forward(ins, 0);
   for(Index i=0; i<outs.size(); ++i)
     outs[i] = RescaleTemp(outs[i]);
   return outs;
@@ -248,8 +227,8 @@ private MkCNNNetwork.trainOnce!(Index batch_index, Float64 ins[][], Float64 t[][
   Ref<MkCNNOptimizer> opti = this.optimizer;
   if(size == 1) 
   {
-    Float64 outs[] = this.fprop(ins[0], 0);
-    this.bprop(outs, t[0], 0);
+    Float64 outs[] = this.forward(ins[0], 0);
+    this.backward(outs, t[0], 0);
     this.layers.updateWeights(opti, 1, 1);
   } 
 
@@ -264,8 +243,8 @@ private MkCNNNetwork.trainOnce!(Index batch_index, Float64 ins[][], Float64 t[][
       Index num = (i == (num_tasks - 1)) ? remaining : data_per_thread;
       for (Index j = 0; j < num; j++) 
       {
-        Float64 outs[] = this.fprop(ins[batch_index + i*num + j], i); 
-        this.bprop(outs, t[i*num + j], i);
+        Float64 outs[] = this.forward(ins[batch_index + i*num + j], i); 
+        this.backward(outs, t[i*num + j], i);
       }
       remaining -= num;
     }
@@ -283,17 +262,17 @@ private MkCNNNetwork.trainOnce!(Index batch_index, Float64 ins[][], Index t[], I
 
 /// Check if a link is canonical
 private Boolean MkCNNNetwork.isCanonicalLink(Ref<MkCNNNeuron> h, Ref<MkCNNLoss> e) {  
-  if (h.mode() == MK_NEURON_SIG && e.mode() == MK_LOSS_CE)  return true;
-  if (h.mode() == MK_NEURON_TANH && e.mode() == MK_LOSS_CE) return true;
-  if (h.mode() == MK_NEURON_ID && e.mode() == MK_LOSS_MSE)  return true;
+  if (h.mode() == MK_NEURON_SIG  && e.mode() == MK_LOSS_CE)  return true;
+  if (h.mode() == MK_NEURON_TANH && e.mode() == MK_LOSS_CE)  return true;
+  if (h.mode() == MK_NEURON_ID   && e.mode() == MK_LOSS_MSE) return true;
   return false;
 }
 
 /// Computation of the hessian
-private MkCNNNetwork.calcHessian!(Float64 ins[][], Index size_init_hessian) {
-  Index size = Math_min(ins.size(), size_init_hessian);
+private MkCNNNetwork.calcHessian!(Float64 ins[][], Index size_hessian) {
+  Index size = Math_min(ins.size(), size_hessian);
   for(Index i=0; i<size; i++) 
-    this.bprop2nd(this.fprop(ins[i], 0));
+    this.backward2(this.forward(ins[i], 0));
   this.layers.divideHessian(size);
 }
 
@@ -305,13 +284,13 @@ private Float64 MkCNNNetwork.getLoss(Float64 outs[], Float64 t[]) {
 }
 
 /// Forward propagation
-private Float64[] MkCNNNetwork.fprop!(Float64 ins[], Index idx) {
+private Float64[] MkCNNNetwork.forward!(Float64 ins[], Index idx) {
   if (ins.size() != this.inDim()) return ins;
-  return this.layers.head().fprop(ins, idx);
+  return this.layers.head().forward(ins, idx);
 }
 
-/// Backward propagetion 
-private MkCNNNetwork.bprop!(Float64 outs[], Float64 t[], Index idx) {
+/// Backward propagation 
+private MkCNNNetwork.backward!(Float64 outs[], Float64 t[], Index idx) {
   Float64 delta[]; delta.resize(this.outDim());
   
   Ref<MkCNNNeuron> h = this.layers.tail().neuron();
@@ -326,11 +305,11 @@ private MkCNNNetwork.bprop!(Float64 outs[], Float64 t[], Index idx) {
       delta[i] = this.loss_function.df(outs[i], t[i]) * h.df(outs[i]);
   }
  
-  this.layers.tail().bprop(delta, idx);
+  this.layers.tail().backward(delta, idx);
 }
 
 /// 2nd Backward propagation, use for Hessian computation 
-private MkCNNNetwork.bprop2nd!(Float64 outs[]) {
+private MkCNNNetwork.backward2!(Float64 outs[]) {
   Float64 delta[]; delta.resize(this.outDim());
   
   Ref<MkCNNNeuron> h = this.layers.tail().neuron();
@@ -345,121 +324,110 @@ private MkCNNNetwork.bprop2nd!(Float64 outs[]) {
       delta[i] = this.targetValueMax() * h.df(outs[i]) * h.df(outs[i]); // FIXME
   }
 
-  this.layers.tail().bprop2nd(delta);
+  this.layers.tail().backward2(delta);
 }
 
-/*
-  private Float64 MkCNNNetwork.calcDeltaDiff!(
-    Float64 ins[][], 
-    Float64 v[][], 
-    Index data_size, 
-    io Float64 w[], 
-    io Float64 dw[], 
-    Index check_index) 
-  {
-    Float64 delta = 1e-10;
+private Float64 MkCNNNetwork.computeDelta!(
+  Float64 ins[][], 
+  Float64 v[][], 
+  Index data_size, 
+  io Float64 w[], 
+  io Float64 dw[], 
+  Index check_index) 
+{
+  Float64 delta = 1e-10;
+  for(Index i=0; i<dw.size(); ++i)
+    dw[i] = 0.0;
 
-    for(Index i=0; i<dw.size(); ++i)
-      dw[i] = 0.0;
-   
-    // calculate dw/dE by bprop
-    for (Index i = 0; i < data_size; i++) 
+  // calculate dw/dE by numeric
+  Float64 prev_w = w[check_index];
+  w[check_index] = prev_w + delta;
+  Float64 f_p = 0.0;
+  for (Index i = 0; i < data_size; i++) 
+    f_p += this.getLoss(this.forward(ins[i], 0), v[i]);
+  
+  Float64 f_m = 0.0;
+  w[check_index] = prev_w - delta;
+  for (Index i = 0; i < data_size; i++) 
+    f_m += this.getLoss(this.forward(ins[i], 0), v[i]);
+  
+  Float64 delta_by_numerical = (f_p - f_m) / (2.0 * delta);
+  w[check_index] = prev_w;
+
+  // calculate dw/dE by backward
+  for (Index i = 0; i < data_size; i++) 
+    this.backward(this.forward(ins[i], 0), v[i], 0);
+  
+  Float64 delta_by_backward = dw[check_index];
+  return abs(delta_by_backward - delta_by_numerical);
+}
+
+public Boolean MkCNNNetwork.gradientCheck!(
+  Float64 ins[][], 
+  Index t[], 
+  Index data_size, 
+  Float64 eps, 
+  Index mode) 
+{
+  if(this.layers.empty()) return false;
+
+  Float64 v[][];
+  this.label2Vector(0, data_size, t, v);
+
+  Ref<MkCNNLayer> current = this.layers.head();
+  while((current = current.next()) != null) 
+  { 
+    // ignore first input layer
+    Float64 w[] = current.weights();
+    Float64 b[] = current.bias();
+    Float64 dw[] = current.weightsDiff(0);
+    Float64 db[] = current.biasDiff(0);
+
+    if (w.size() == 0) continue;
+    
+    switch (mode) 
     {
-      Float64 outs[] = this.fprop(ins[i], 0);
-      this.bprop(outs, v[i], 0);
-    }
-    Float64 delta_by_bprop = dw[check_index];
-
-    // calculate dw/dE by numeric
-    Float64 prev_w = w[check_index];
-    w[check_index] = prev_w + delta;
-    Float64 f_p = 0.0;
-    for (Index i = 0; i < data_size; i++) 
-    {
-      Float64 outs[] = this.fprop(ins[i], 0);
-      f_p += this.getLoss(outs, v[i]);
-    }
-
-    Float64 f_m = 0.0;
-    w[check_index] = prev_w - delta;
-    for (Index i = 0; i < data_size; i++) 
-    {
-      Float64 outs[] = this.fprop(ins[i], 0);
-      f_m += this.getLoss(outs, v[i]);
-    }
-    w[check_index] = prev_w;
-
-    Float64 delta_by_numerical = (f_p - f_m) / (2.0 * delta);
-    return abs(delta_by_bprop - delta_by_numerical);
-  }
-
-  public Boolean MkCNNNetwork.gradientCheck!(
-    Float64 ins[][], 
-    Index t[], 
-    Index data_size, 
-    Float64 eps, 
-    Index mode) 
-  {
-    if(this.layers.empty()) return false;
-
-    Float64 v[][];
-    this.label2Vector(0, data_size, t, v);
-
-    Ref<MkCNNLayer> current = this.layers.head();
-    while((current = current.next()) != null) 
-    { 
-      // ignore first input layer
-      Float64 w[] = current.weight();
-      Float64 b[] = current.bias();
-      Float64 dw[] = current.weightDiff(0);
-      Float64 db[] = current.biasDiff(0);
-
-      if (w.size() == 0) continue;
-      
-      switch (mode) 
-      {
-        case MK_GRAD_CHECK_ALL:
-          for (Index i = 0; i < w.size(); i++) 
-          {
-            if (this.calcDeltaDiff(ins, v, data_size, w, dw, i) > eps) 
-              return false;
-          }
-          for (Index i = 0; i < b.size(); i++) 
-          {
-            if (this.calcDeltaDiff(ins, v, data_size, b, db, i) > eps) 
-              return false;
-          }
-        break;
-        
-        case MK_GRAD_CHECK_FIRST:
-          if (this.calcDeltaDiff(ins, v, data_size, w, dw, 0) > eps) 
+      case MK_GRAD_CHECK_ALL:
+        for (Index i = 0; i < w.size(); i++) 
+        {
+          if (this.computeDelta(ins, v, data_size, w, dw, i) > eps) 
             return false;
-          if (this.calcDeltaDiff(ins, v, data_size, b, db, 0) > eps) 
-           false;
-        break;
-        
-        case MK_GRAD_CHECK_RANDOM:
-          for (Index i = 0; i < 10; i++) 
-          {
-            Index index; UniformRand(0, w.size() - 1, index);
-            if (this.calcDeltaDiff(ins, v, data_size, w, dw, index) > eps) 
+        }
+        for (Index i = 0; i < b.size(); i++) 
+        {
+          if (this.computeDelta(ins, v, data_size, b, db, i) > eps) 
+            return false;
+        }
+      break;
+      
+      case MK_GRAD_CHECK_FIRST:
+        if (this.computeDelta(ins, v, data_size, w, dw, 0) > eps) 
+          return false;
+        if (this.computeDelta(ins, v, data_size, b, db, 0) > eps) 
+         false;
+      break;
+      
+      case MK_GRAD_CHECK_RANDOM:
+        for (Index i = 0; i < 10; i++) 
+        {
+          Index index; UniformRand(0, w.size() - 1, index);
+          if (this.computeDelta(ins, v, data_size, w, dw, index) > eps) 
+            return false;
+        }
+        for (Index i = 0; i < 10; i++) 
+        {
+            Index index; UniformRand(0, b.size() - 1, index);
+            if (this.computeDelta(ins, v, data_size, b, db, index) > eps) 
               return false;
-          }
-          for (Index i = 0; i < 10; i++) 
-          {
-              Index index; UniformRand(0, b.size() - 1, index);
-              if (this.calcDeltaDiff(ins, v, data_size, b, db, index) > eps) 
-                return false;
-          }
-        break;
+        }
+      break;
 
-        default:
-          report("unknown grad-check type");
-          //throw nn_error("unknown grad-check type");
-        break;
-      }
+      default:
+        report("unknown grad-check type");
+        //throw nn_error("unknown grad-check type");
+      break;
     }
-
-    return true;
   }
-*/
+
+  return true;
+}

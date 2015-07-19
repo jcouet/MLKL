@@ -36,13 +36,13 @@ tool=train
 gpu=0
 nbEpoch=5
 batchSize=10
-optimizer=1
+optimizer=3
 lossFunction=0
 
 
 # 2. Layer definitions 
-layersDefsPath=C:/Users/Julien/Documents/Dev/MLKL/app/sample/cnn/cnn_layers_def.mlkl
-layersParamsPath=C:/Users/Julien/Documents/Dev/MLKL/app/sample/cnn/cnn_layers_params.mlkl
+layersDefsPath=C:/Users/Julien/Documents/Dev/MLKL/app/cnn/cnn_layers_def.mlkl
+layersParamsPath=C:/Users/Julien/Documents/Dev/MLKL/app/cnn/cnn_layers_params.mlkl
 
 
 # 3. Images and labels
@@ -51,10 +51,10 @@ trainImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/cifar-10/data_batch
 testImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/cifar-10/test_batch.bin
 
 # For MNIST
-# trainImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-images.idx3-ubyte
-# testImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-images.idx3-ubyte
-# trainLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-labels.idx1-ubyte
-# testLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-labels.idx1-ubyte
+#trainImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-images.idx3-ubyte
+#testImagesPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-images.idx3-ubyte
+#trainLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/train-labels.idx1-ubyte
+#testLabelsPath=C:/Users/Julien/Documents/Dev/MLKL/resources/mnist/t10k-labels.idx1-ubyte
 
 
 # 4. Network saving and loading

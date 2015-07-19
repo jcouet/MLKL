@@ -164,35 +164,6 @@ function Boolean MkCNNConnectionTable.isEmpty() {
 
 //************************************************************************************************//
 //                                                 Outputs                                        //
-/// Hash table
-struct MkCNNHashTable {
-  Float64 values[];
-};
-
-function MkCNNHashTable() {
-  this.values.resize(0);
-}
-
-function MkCNNHashTable(Float64 values[]) {
-  this.values = values;
-}
-
-function Boolean == (MkCNNHashTable lhs, MkCNNHashTable rhs) {
-  if(lhs.values.size() != rhs.values.size()) 
-    return false;
-
-  for(Index i=0; i<lhs.values.size(); ++i)
-    if(lhs.values[i] != rhs.values[i]) 
-      return false;
-
-  return true;
-}
-
-function MkCNNHashTable.clear!() {
-  this.values.resize(0);
-}
-
-
 /// Structure contraining the result of the learning
 struct MkCNNNetworkResult {
   Index num_success;
@@ -327,7 +298,7 @@ function MkCNNEnumEpoch.display(io Ref<MkCNNNetwork> nn, Float64 test_images[][]
   report("Test             : " + succes + "% succes\n");
 }
 
-/// Update the epoch info + optimizer
+/// Update the epoch info and the optimizer
 function MkCNNEnumEpoch.update!(io Ref<MkCNNNetwork> nn, Float64 test_images[][], Index test_labels[]) {
   // Display the info
   this.display(nn, test_images, test_labels);

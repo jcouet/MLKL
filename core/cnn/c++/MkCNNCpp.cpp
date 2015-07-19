@@ -340,6 +340,6 @@ FABRIC_EXT_EXPORT void CurrentDateTime(KL::Traits< KL::String >::IOParam str) {
   struct tm tstruct;
   char buf[80];
   tstruct = *localtime(&now);
-  strftime(buf, sizeof(buf), "%Y-%m-%d_%H-%M-%S", &tstruct);
+  strftime(buf, sizeof(buf), "%Y_%m_%d-%H_%M_%S", &tstruct);
   str = KL::String(string(buf).c_str());
 }
