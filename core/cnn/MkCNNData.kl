@@ -28,18 +28,8 @@ struct MkCNNData {
   Float64 test_images[][];
 };
 
-inline NormalizeImage(Float64 scale_min, Float64 scale_max, io Float64 image[]) {
-  for(Index j=0; j<image.size(); ++j)
-    image[j] = (image[j] / 255.0) * (scale_max - scale_min) + scale_min;
-}
-
-inline NormalizeImages(Float64 scale_min, Float64 scale_max, io Float64 images[][]) {
-  for(Index i=0; i<images.size(); ++i)
-    NormalizeImage(scale_min, scale_max, images[i]);
-}
-
 /// Display in the console
-private MkCNNData.display(String data_origin, MkCNNConfig config) {
+public MkCNNData.display(String data_origin, MkCNNConfig config) {
   report("\n\n\n-------------------- " + data_origin + " data --------------------");
   report("Training number  : " + this.train_images.size());
   report("Testing number   : " + this.test_images.size());
@@ -49,6 +39,16 @@ private MkCNNData.display(String data_origin, MkCNNConfig config) {
   report("Train label path : " + config.train_labels_path);
   report("Test image path  : " + config.test_images_path);
   report("Test label path  : " + config.test_labels_path);
+}
+
+inline NormalizeImage(Float64 scale_min, Float64 scale_max, io Float64 image[]) {
+  for(Index j=0; j<image.size(); ++j)
+    image[j] = (image[j] / 255.0) * (scale_max - scale_min) + scale_min;
+}
+
+inline NormalizeImages(Float64 scale_min, Float64 scale_max, io Float64 images[][]) {
+  for(Index i=0; i<images.size(); ++i)
+    NormalizeImage(scale_min, scale_max, images[i]);
 }
 
 /// Load MNIST data for training
@@ -85,38 +85,57 @@ function Float64[] MkCNNData.loadValidationMNIST!(String path, Float64 scale_min
   return image;
 }
 
-public MkCNNData.loadTrainingCIFAR!(MkCNNConfig config, Boolean rgb, Float64 scale_min, Float64 scale_max) {
+public MkCNNData LoadTrainingCIFAR(
+  MkCNNConfig config, 
+  Boolean rgb, 
+  Float64 scale_min, 
+  Float64 scale_max) 
+{ 
+  MkCNNData data;
   MkCNNCpp cifar();
-  cifar.readBatch_CIFAR(config.train_images_path, rgb, this.train_images, this.train_labels);
-  cifar.readBatch_CIFAR(config.test_images_path, rgb, this.test_images, this.test_labels);
-  NormalizeImages(scale_min, scale_max, this.train_images);
-  NormalizeImages(scale_min, scale_max, this.test_images);
-  this.display("CIFAR", config);
-}
+  FilePath file_path(config.train_images_path);
+  String cifar_folder = file_path.parentPath().string();
 
-public MkCNNData.loadTrainingCIFAR!() {
-  
-  MkCNNCpp cifar();
-  Boolean rgb = false;
   for(Index p=0; p<5; ++p)
   {
-    String trainImagesPath = "C:/Users/Julien/Documents/Dev/MLKL/resources/cifar-10/data_batch_" + (p+1) + ".bin";
-    Index train_labels[];
-    Float64 train_images[][];
-    cifar.readBatch_CIFAR(trainImagesPath, rgb, train_images, train_labels);
-
-    for(Index i=0; i<train_images.size(); ++i)
+    String train_images_path = cifar_folder + "/data_batch_" + (p+1) + ".bin";
+    if(p < 4)
     {
-      this.train_images.push(train_images[i]);
-      this.train_labels.push(train_labels[i]);
+      Index train_labels[];
+      Float64 train_images[][];
+      cifar.readBatch_CIFAR(train_images_path, rgb, train_images, train_labels);
+      for(Index i=0; i<train_images.size(); ++i) 
+      {
+        data.train_images.push(train_images[i]);
+        data.train_labels.push(train_labels[i]);
+      }
     }
+    else if (p == 4)
+      cifar.readBatch_CIFAR(train_images_path, rgb, data.test_images, data.test_labels);
+  }
+  data.display("CIFAR", config);
+
+  if(scale_min > -1 && scale_max > -1)
+  {
+    NormalizeImages(0.0, 1.0, data.train_images);
+    NormalizeImages(0.0, 1.0, data.test_images);
   }
 
-  String testImagesPath = "C:/Users/Julien/Documents/Dev/MLKL/resources/cifar-10/test_batch.bin";
-  cifar.readBatch_CIFAR(testImagesPath, rgb, this.test_images, this.test_labels);
-  //this.display("CIFAR", config);
-
-  //NormalizeImages(0.0, 1.0, this.train_images);
-  //NormalizeImages(0.0, 1.0, this.test_images);
+  return data;
 }
 
+public Float64[][] LoadValidationCIFAR(
+  MkCNNConfig config, 
+  Boolean rgb, 
+  Float64 scale_min, 
+  Float64 scale_max) 
+{ 
+  Index validation_labels[];
+  Float64 validation_images[][];
+  MkCNNCpp cifar();
+  cifar.readBatch_CIFAR(config.test_images_path, rgb, validation_images, validation_labels);
+  if(scale_min > -1 && scale_max > -1)
+    NormalizeImages(0.0, 1.0, validation_images);
+  return validation_images;
+}
+ 

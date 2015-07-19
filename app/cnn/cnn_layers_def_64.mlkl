@@ -18,7 +18,7 @@
 [conv1]
 type=conv
 neuron=relu
-filters=32
+filters=64
 filterSize=5
 inChannels=3
 outChannels=6
@@ -29,7 +29,7 @@ outChannels=6
 type=pool
 pool=avg
 neuron=relu
-filters=28
+filters=60
 inChannels=6
 poolingSize=2
 #initW=0.0
@@ -38,7 +38,7 @@ poolingSize=2
 [conv2]
 type=conv
 neuron=relu
-filters=14
+filters=30
 filterSize=5
 inChannels=6
 outChannels=16
@@ -49,7 +49,7 @@ outChannels=16
 type=pool
 pool=avg
 neuron=relu
-filters=10
+filters=26
 inChannels=16
 poolingSize=2
 #initW=0.0
@@ -58,7 +58,7 @@ poolingSize=2
 [conv3]
 type=conv
 neuron=relu
-filters=5
+filters=13
 filterSize=5
 inChannels=16
 outChannels=120
@@ -68,7 +68,7 @@ outChannels=120
 [fc3]
 type=fc
 neuron=relu
-inChannels=120
+inChannels=9720
 outChannels=10
 #initW=0.0
 #initB=0.0

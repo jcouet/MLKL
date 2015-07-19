@@ -32,10 +32,8 @@ operator entry() {
   MkCNNEnumEpoch epoch_enum(); 
   
   // Load the training data
-  MkCNNData data;
-  //data.loadTrainingMNIST(config);
-  data.loadTrainingCIFAR();
-  
+  MkCNNData data = LoadTrainingCIFAR(config, true, -1.0, -1.0);
+  //data.loadTrainingMNIST(config); 
  
   // Train the network
   // The network (the layers' weights) is tested and saved at each epch
@@ -43,7 +41,7 @@ operator entry() {
 
 
   // Finally test it and save it
-  //Float64 image_data[] = LoadValidationData_MNIST(path_image, -1.0, 1.0);
-  //report(nn.predictRescale(image_data));
+  Float64 image_data[][] = LoadValidationCIFAR(config, true, -1.0, -1.0);
+  report(nn.predictRescale(image_data));
 }
 
